@@ -72,9 +72,9 @@ Execute os comandos abaixo no terminal PowerShell na raiz do projeto (`c:\Users\
 
 2. **Ajustar a marcação do Alembic no Neon (somente se o seu banco Neon já estava marcado na revisão vazia `f088c4b0bfcd` removida):**
    ```powershell
-   .\.venv\Scripts\alembic.exe stamp c0d49a3075c6
+   .\.venv\Scripts\alembic.exe stamp --purge c0d49a3075c6
    ```
-   *Reposiciona o ponteiro da tabela `alembic_version` na revisão `c0d49a3075c6` antes de aplicar a nova migração.*
+   *Reposiciona o ponteiro da tabela `alembic_version` na revisão `c0d49a3075c6` antes de aplicar a nova migração. O `--purge` é obrigatório: sem ele o Alembic tenta localizar o arquivo `f088c4b0bfcd` (removido) e falha com `Can't locate revision`.*
 
 3. **Aplicar a migração da Fase 2 no banco Neon (`ativos`, `cotacoes`, `analises_ia` e `UniqueConstraint` da Watchlist):**
    ```powershell
