@@ -179,7 +179,7 @@
     <div class="nav-links">
       <a class="btn btn-sec" href="/">🌐 Painel B3</a>
       {% if usuario %}
-        <a class="btn btn-sec" href="/watchlist">⭐ Minha Watchlist ({{ usuario.nome.split()[0] }})</a>
+        <a class="btn btn-sec" href="/watchlist">⭐ Minha Watchlist ({{ (usuario.nome.split() or ['Investidor'])[0] }})</a>
         <a class="btn btn-sec" href="/logout">Sair</a>
       {% else %}
         <a class="btn btn-sec" href="/login">Entrar</a>

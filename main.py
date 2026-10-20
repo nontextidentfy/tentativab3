@@ -9,6 +9,7 @@ from fastapi import FastAPI, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.exceptions import RequestValidationError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -29,12 +30,36 @@ from banco import (
 # Garante que as sequências de ID do PostgreSQL estejam sincronizadas ao iniciar
 sincronizar_sequencias_postgres()
 
-limiter = Limiter(key_func=get_remote_address)
+PASTA_PROJETO = os.path.dirname(os.path.abspath(__file__))
+RATE_LIMIT_STORAGE_URI = (os.getenv("RATE_LIMIT_STORAGE_URI") or "memory://").strip()
+
+PERFIS_OPCOES: tuple[tuple[str, str], ...] = (
+    ("Fundamentalista", "Fundamentalista / Valuation"),
+    ("Dividendos", "Dividendos & Renda Passiva"),
+    ("FIIs", "Fundos Imobiliários (FIIs)"),
+    ("Fluxo", "Fluxo de Volume & Liquidez"),
+)
+PERFIS_PERMITIDOS: set[str] = {valor for valor, _ in PERFIS_OPCOES}
+
+
+def obter_ip_cliente(request: Request) -> str:
+    """Retorna o IP real do cliente. Lê X-Forwarded-For apenas quando CONFIAR_PROXY=1."""
+    if os.getenv("CONFIAR_PROXY", "").strip() == "1":
+        xff = request.headers.get("X-Forwarded-For", "")
+        if xff:
+            primeiro_ip = xff.split(",")[0].strip()
+            if primeiro_ip:
+                return primeiro_ip
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=obter_ip_cliente, storage_uri=RATE_LIMIT_STORAGE_URI)
 
 app = FastAPI(title="Investidor IA - Análise Fundamentalista B3")
 app.state.limiter = limiter
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=os.path.join(PASTA_PROJETO, "templates"))
+templates.env.globals["PERFIS_OPCOES"] = PERFIS_OPCOES
 log = logging.getLogger("investidor_ia")
 
 HORAS_CACHE = 24
@@ -80,17 +105,62 @@ def obter_recentes_seguro(db: Session):
         return []
 
 
+def _mensagem_validacao(exc: RequestValidationError, padrao: str) -> str:
+    for erro in exc.errors():
+        loc = [str(p) for p in erro.get("loc", ())]
+        campo = loc[-1] if loc else ""
+        if campo in ("senha", "nova_senha"):
+            return "A senha deve ter entre 8 e 100 caracteres."
+        if campo == "nome":
+            return "O nome deve ter entre 2 e 120 caracteres."
+        if campo == "email":
+            return "Informe um e-mail válido (entre 5 e 150 caracteres)."
+        if campo == "perfil":
+            return "Selecione um perfil de investidor válido."
+        if campo == "notas":
+            return "As anotações devem ter no máximo 500 caracteres."
+        if campo == "ticker":
+            return "Verifique os dados informados. Digite o ticker (ex.: SAPR4) ou o nome da empresa (ex.: Sanepar)."
+    return padrao
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    caminho = request.url.path
     with SessionLocal() as db:
-        painel_ativos = obter_recentes_seguro(db)
         usuario = auth.obter_usuario_atual(request, db)
+        if caminho in ("/cadastro", "/login", "/esqueci-senha") or caminho.startswith("/redefinir-senha/"):
+            modo_map = {
+                "/cadastro": "cadastro",
+                "/login": "login",
+                "/esqueci-senha": "esqueci",
+            }
+            modo = modo_map.get(caminho, "redefinir")
+            token = caminho.split("/redefinir-senha/", 1)[1] if caminho.startswith("/redefinir-senha/") else None
+            msg = _mensagem_validacao(exc, "Verifique os dados preenchidos no formulário.")
+            return templates.TemplateResponse(
+                request=request,
+                name="auth.html",
+                context={"modo": modo, "token": token, "usuario": usuario, "error_msg": msg},
+                status_code=422,
+            )
+
+        if caminho.startswith("/watchlist"):
+            msg = _mensagem_validacao(exc, "Verifique os dados informados para a Watchlist.")
+            return RedirectResponse(url=f"/watchlist?erro={quote_plus(msg)}", status_code=303)
+
+        painel_ativos = obter_recentes_seguro(db)
+
+    msg = _mensagem_validacao(
+        exc,
+        "Verifique os dados informados. Digite o ticker (ex.: SAPR4) ou o nome da empresa (ex.: Sanepar).",
+    )
     return templates.TemplateResponse(
         request=request,
         name="home.html",
         context={
             "usuario": usuario,
-            "error_msg": "Verifique os dados informados. Digite o ticker (ex.: SAPR4) ou o nome da empresa (ex.: Sanepar).",
+            "error_msg": msg,
             "painel_ativos": painel_ativos,
         },
         status_code=422,
@@ -102,12 +172,17 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
     with SessionLocal() as db:
         painel_ativos = obter_recentes_seguro(db)
         usuario = auth.obter_usuario_atual(request, db)
+    detalhe = str(getattr(exc, "detail", "") or str(exc)).lower()
+    if "day" in detalhe or "dia" in detalhe:
+        msg = "Limite diário de requisições atingido por segurança. Tente novamente amanhã."
+    else:
+        msg = "Limite de requisições por minuto atingido por segurança. Aguarde um minuto e tente novamente."
     return templates.TemplateResponse(
         request=request,
         name="home.html",
         context={
             "usuario": usuario,
-            "error_msg": "Limite de requisições atingido por segurança. Aguarde um minuto e tente novamente.",
+            "error_msg": msg,
             "painel_ativos": painel_ativos,
         },
         status_code=429,
@@ -278,25 +353,50 @@ def processar_cadastro(
     aceite_termos: Optional[str] = Form(None),
     db: Session = Depends(obter_sessao_banco),
 ):
+    nome_limpo = (nome or "").strip()
+    if len(nome_limpo) < 2 or len(nome_limpo) > 120:
+        return templates.TemplateResponse(
+            request=request,
+            name="auth.html",
+            context={"modo": "cadastro", "error_msg": "O nome deve ter entre 2 e 120 caracteres."},
+            status_code=422,
+        )
+
+    if perfil not in PERFIS_PERMITIDOS:
+        return templates.TemplateResponse(
+            request=request,
+            name="auth.html",
+            context={"modo": "cadastro", "error_msg": "Selecione um perfil de investidor válido."},
+            status_code=422,
+        )
+
     if not aceite_termos:
         return templates.TemplateResponse(
             request=request,
             name="auth.html",
             context={"modo": "cadastro", "error_msg": "Você precisa aceitar os Termos de Uso e Política de Privacidade (LGPD)."},
         )
-    
+
     email_limpo = email.strip().lower()
     usuario_existente = db.query(Usuario).filter(Usuario.email == email_limpo).first()
 
     if usuario_existente:
         # Se era um registro antigo da Fase 1 sem senha definida, atualiza com a nova senha Argon2
         if not usuario_existente.senha_hash:
-            usuario_existente.nome = nome.strip()
-            usuario_existente.senha_hash = auth.gerar_hash_senha(senha)
-            usuario_existente.perfil_investidor = perfil
-            usuario_existente.aceitou_termos_em = agora_utc()
-            db.commit()
-            db.refresh(usuario_existente)
+            try:
+                usuario_existente.nome = nome_limpo
+                usuario_existente.senha_hash = auth.gerar_hash_senha(senha)
+                usuario_existente.perfil_investidor = perfil
+                usuario_existente.aceitou_termos_em = agora_utc()
+                db.commit()
+                db.refresh(usuario_existente)
+            except IntegrityError:
+                db.rollback()
+                return templates.TemplateResponse(
+                    request=request,
+                    name="auth.html",
+                    context={"modo": "cadastro", "error_msg": "Este e-mail já está cadastrado. Faça login ou recupere sua senha."},
+                )
             auth.disparar_confirmacao_email(usuario_existente)
             resp = RedirectResponse(
                 url="/watchlist?msg=Cadastro+atualizado+com+sucesso!+Confira+o+terminal+para+confirmar+o+e-mail.",
@@ -312,7 +412,7 @@ def processar_cadastro(
         )
 
     novo_usuario = Usuario(
-        nome=nome.strip(),
+        nome=nome_limpo,
         email=email_limpo,
         senha_hash=auth.gerar_hash_senha(senha),
         email_confirmado=False,
@@ -320,8 +420,16 @@ def processar_cadastro(
         aceitou_termos_em=agora_utc(),
     )
     db.add(novo_usuario)
-    db.commit()
-    db.refresh(novo_usuario)
+    try:
+        db.commit()
+        db.refresh(novo_usuario)
+    except IntegrityError:
+        db.rollback()
+        return templates.TemplateResponse(
+            request=request,
+            name="auth.html",
+            context={"modo": "cadastro", "error_msg": "Este e-mail já está cadastrado. Faça login ou recupere sua senha."},
+        )
 
     auth.disparar_confirmacao_email(novo_usuario)
 
@@ -365,8 +473,8 @@ def tela_login(request: Request, msg: Optional[str] = None, usuario: Optional[Us
 @limiter.limit("8/minute")
 def processar_login(
     request: Request,
-    email: str = Form(...),
-    senha: str = Form(...),
+    email: str = Form(..., min_length=5, max_length=150),
+    senha: str = Form(..., min_length=1, max_length=100),
     db: Session = Depends(obter_sessao_banco),
 ):
     email_limpo = email.strip().lower()
@@ -399,7 +507,7 @@ def tela_esqueci_senha(request: Request, usuario: Optional[Usuario] = Depends(au
 @limiter.limit("3/minute")
 def processar_esqueci_senha(
     request: Request,
-    email: str = Form(...),
+    email: str = Form(..., min_length=5, max_length=150),
     db: Session = Depends(obter_sessao_banco),
 ):
     u = db.query(Usuario).filter(Usuario.email == email.strip().lower()).first()
@@ -507,9 +615,9 @@ def painel_watchlist(
 
 @app.post("/watchlist/adicionar")
 def adicionar_watchlist(
-    ticker: str = Form(...),
+    ticker: str = Form(..., min_length=2, max_length=60),
     preco_alvo: str = Form(""),
-    notas: str = Form(""),
+    notas: str = Form("", max_length=500),
     db: Session = Depends(obter_sessao_banco),
     usuario: Optional[Usuario] = Depends(auth.obter_usuario_atual),
 ):

@@ -307,8 +307,9 @@
           <td>{{ r.nome_empresa }}</td>
           <td><span class="badge">{{ r.tipo_ativo }}</span></td>
           <td><strong>R$ {{ r.preco_atual | moeda_br }}</strong></td>
-          <td class="{{ 'pos' if r.variacao_dia_pct >= 0 else 'neg' }}">
-            {{ '+' if r.variacao_dia_pct >= 0 else '' }}{{ r.variacao_dia_pct | moeda_br }}%
+          {% set var_dia = r.variacao_dia_pct or 0 %}
+          <td class="{{ 'pos' if var_dia >= 0 else 'neg' }}">
+            {{ '+' if var_dia >= 0 else '' }}{{ var_dia | moeda_br }}%
           </td>
           <td>{{ r.volume_financeiro or 'N/D' }}</td>
           <td>{{ r.p_l or 'N/D' }}</td>

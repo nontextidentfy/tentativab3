@@ -27,7 +27,7 @@
   <form method="post" action="/watchlist/adicionar" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
     <input class="input-padrao" type="text" name="ticker" placeholder="Empresa ou ticker (ex: Sanepar, WEGE3, HGLG11)" required minlength="2" maxlength="60">
     <input class="input-padrao" type="number" step="0.01" name="preco_alvo" placeholder="Preço Alvo de Alerta R$ (opcional)">
-    <input class="input-padrao" type="text" name="notas" placeholder="Suas anotações privadas sobre o balanço/ativo...">
+    <input class="input-padrao" type="text" name="notas" maxlength="500" placeholder="Suas anotações privadas sobre o balanço/ativo...">
     <button type="submit">Salvar na Watchlist</button>
   </form>
 </div>
