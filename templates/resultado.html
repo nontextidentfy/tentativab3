@@ -4,17 +4,110 @@
 
 {% block extra_css %}
 <style>
-  .topo-ativo { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start;
-                gap:15px; background:var(--card); padding:1.35rem; border-radius:10px; border:1px solid var(--borda); }
-  .faixa-barra { position:relative; height:8px; background:linear-gradient(90deg,var(--neg),#facc15,var(--pos));
-                 border-radius:4px; margin:14px 8px 8px; }
-  .faixa-marcador { position:absolute; top:-5px; width:18px; height:18px; border-radius:50%; background:var(--texto);
-                    border:3px solid var(--bg); transform:translateX(-50%); }
-  .faixa-legenda { display:flex; justify-content:space-between; font-size:.8rem; color:var(--suave); flex-wrap:wrap; }
-  .report-box { background:var(--card); border:1px solid var(--borda); border-radius:10px; padding:1.5rem; }
-  .report-content { color:#cbd5e1; line-height:1.65; }
-  .report-content h3 { color:var(--destaque); font-size:1.05rem; margin:1.3rem 0 .4rem; }
-  .report-content blockquote { border-left:3px solid var(--destaque); margin:0 0 1rem; padding-left:12px; color:var(--suave); }
+  .topo-ativo {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    background: var(--card);
+    padding: 1.5rem;
+    border-radius: 14px;
+    border: 1px solid var(--borda);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+    margin-bottom: 1.25rem;
+  }
+  .topo-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .resumo-negocio {
+    margin-top: 1rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--borda);
+    width: 100%;
+    font-size: 0.88rem;
+    color: var(--suave);
+  }
+  .resumo-negocio summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--destaque);
+    user-select: none;
+  }
+  .resumo-negocio p {
+    margin: 0.65rem 0 0;
+    line-height: 1.6;
+  }
+  .margem-barra {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+  .margem-preenchimento {
+    height: 100%;
+    border-radius: 4px;
+  }
+  .margem-preenchimento.pos {
+    background: var(--pos);
+  }
+  .margem-preenchimento.neg {
+    background: var(--neg);
+  }
+  .faixa-barra {
+    position: relative;
+    height: 8px;
+    background: linear-gradient(90deg, var(--neg), #facc15, var(--pos));
+    border-radius: 4px;
+    margin: 14px 8px 8px;
+  }
+  .faixa-marcador {
+    position: absolute;
+    top: -5px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--texto);
+    border: 3px solid var(--bg);
+    transform: translateX(-50%);
+  }
+  .faixa-legenda {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--suave);
+    flex-wrap: wrap;
+  }
+  .report-box {
+    background: var(--card);
+    border: 1px solid var(--borda);
+    border-radius: 14px;
+    padding: 1.5rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .report-content {
+    color: var(--suave);
+    line-height: 1.65;
+  }
+  .report-content h3 {
+    color: var(--destaque);
+    font-size: 1.05rem;
+    margin: 1.3rem 0 0.4rem;
+  }
+  .report-content blockquote {
+    border-left: 3px solid var(--destaque);
+    margin: 0 0 1rem;
+    padding-left: 12px;
+    color: var(--suave);
+  }
 </style>
 {% endblock %}
 
@@ -23,16 +116,40 @@
 {% set moeda_cot = meta.get('moeda_cotacao') or dados.Identificacao.get('Moeda_Cotacao') or 'BRL' %}
 {% set moeda_bal = meta.get('moeda_balanco') or dados.Identificacao.get('Moeda_do_Balanco') or moeda_cot %}
 {% set simbolo = meta.get('simbolo') or dados.Identificacao.get('Simbolo_Moeda') or 'R$' %}
+{% set simbolo_bal = meta.get('simbolo_balanco') or dados.Identificacao.get('Simbolo_Moeda_Balanco') or simbolo %}
 {% set var_dia = dados.Cotacao_e_Mercado.Variacao_Dia or 0 %}
+{% set margem_graham = dados.Valuation.get('Margem_Graham_Pct') %}
+{% set margem_bazin = dados.Valuation.get('Margem_Bazin_Pct') %}
+{% set site_oficial = dados.Identificacao.get('Site_Oficial') %}
 
 <div class="topo-ativo">
   <div>
     <h2 style="margin:0 0 4px; font-size:1.75rem;">
       {{ dados.Identificacao.Ticker }}
-      <span class="badge">{{ dados.Identificacao.Tipo_Ativo }}</span>
+      <span class="badge badge-destaque">{{ dados.Identificacao.Tipo_Ativo }}</span>
     </h2>
     <div style="color:var(--suave); font-size:.92rem;">
       {{ dados.Identificacao.Nome_Empresa }} • Setor: {{ dados.Identificacao.Setor }} ({{ dados.Identificacao.Industria }})
+    </div>
+    <div class="topo-acoes">
+      {% if usuario %}
+      <form method="post" action="/watchlist/adicionar" style="margin:0;">
+        <input type="hidden" name="ticker" value="{{ dados.Identificacao.Ticker }}">
+        <button type="submit" class="btn btn-destaque" style="padding:8px 14px; font-size:.84rem;">
+          ⭐ Adicionar à Watchlist
+        </button>
+      </form>
+      {% else %}
+      <a href="/login?msg=Faca+login+para+adicionar+ativos+a+sua+Watchlist." class="btn btn-destaque" style="padding:8px 14px; font-size:.84rem;">
+        ⭐ Adicionar à Watchlist
+      </a>
+      {% endif %}
+
+      {% if site_oficial and site_oficial != 'N/D' %}
+      <a href="{{ site_oficial }}" target="_blank" rel="noopener noreferrer" class="btn btn-sec">
+        🌐 Site Oficial / RI
+      </a>
+      {% endif %}
     </div>
   </div>
   <div style="text-align:right;">
@@ -41,9 +158,16 @@
       {{ '+' if var_dia >= 0 else '' }}{{ var_dia | numero_br(2) }}% no pregão
     </div>
   </div>
+
+  {% if dados.Identificacao.Resumo_Negocio %}
+  <details class="resumo-negocio">
+    <summary>🏢 Sobre {{ dados.Identificacao.Nome_Empresa }} (Resumo Institucional)</summary>
+    <p>{{ dados.Identificacao.Resumo_Negocio }}</p>
+  </details>
+  {% endif %}
 </div>
 
-<div class="secao-titulo">📈 Monitor de Liquidez & Fluxo de Volume (Entrada e Saída)</div>
+<div class="secao-titulo">📈 Monitor de Liquidez & Fluxo de Volume</div>
 <div class="cards-grid">
   <div class="card">
     <div class="title">Volume Financeiro (Dia)</div>
@@ -70,7 +194,7 @@
 </div>
 
 <div class="painel">
-  <h3>📊 Histórico de Fluxo nos Últimos 5 Pregões</h3>
+  <h3>📊 Histórico de Volume nos Últimos 5 Pregões</h3>
   <div style="overflow-x:auto;">
     <table class="tabela">
       <thead>
@@ -109,19 +233,21 @@
   <div class="card">
     <div class="title">P/VP</div>
     <div class="value">{{ dados.Valuation.P_VP | numero_br(2) }}</div>
-    <div class="detail">VPA: {{ dados.Valuation.VPA | moeda_br(simbolo) }}</div>
+    <div class="detail">VPA: {{ dados.Valuation.VPA | moeda_br(simbolo_bal) }}</div>
   </div>
   <div class="card">
     <div class="title">EV / EBITDA</div>
     <div class="value">{{ dados.Valuation.EV_EBITDA | numero_br(2) }}</div>
-    <div class="detail">LPA: {{ dados.Valuation.LPA | moeda_br(simbolo) }}</div>
+    <div class="detail">LPA: {{ dados.Valuation.LPA | moeda_br(simbolo_bal) }}</div>
   </div>
   <div class="card">
     <div class="title">Dividend Yield (12m)</div>
     <div class="value {{ 'pos' if (dados.Proventos.Dividend_Yield_Real_12m or 0) > 0 else '' }}">
       {{ dados.Proventos.Dividend_Yield_Real_12m | percentual_br }}
     </div>
-    <div class="detail">{{ dados.Proventos.Total_Pago_12m_por_Cota | moeda_br(simbolo) }} / cota</div>
+    <div class="detail">
+      {{ dados.Proventos.Total_Pago_12m_por_Cota | moeda_br(simbolo) }} / cota • Payout: {{ dados.Proventos.Payout_Ratio | percentual_br }}
+    </div>
   </div>
   <div class="card">
     <div class="title">Preço Justo Graham</div>
@@ -135,6 +261,16 @@
     <div class="detail">
       {{ meta.get('obs_graham') or dados.Valuation.get('Obs_Graham') or 'Fórmula √(22,5 × LPA × VPA)' }}
     </div>
+    {% if margem_graham is not none %}
+    <div style="margin-top:6px;">
+      <span class="badge {{ 'badge-pos' if margem_graham >= 0 else 'badge-neg' }}">
+        {{ 'Margem' if margem_graham >= 0 else 'Prêmio' }}: {{ '+' if margem_graham >= 0 else '' }}{{ margem_graham | numero_br(2) }}%
+      </span>
+      <div class="margem-barra">
+        <div class="margem-preenchimento {{ 'pos' if margem_graham >= 0 else 'neg' }}" style="width:{{ dados.Valuation.get('Barra_Graham_Pct', 50) }}%"></div>
+      </div>
+    </div>
+    {% endif %}
   </div>
   <div class="card">
     <div class="title">Preço Teto Bazin (6%)</div>
@@ -146,6 +282,16 @@
       {% endif %}
     </div>
     <div class="detail">{{ dados.Proventos.Frequencia_Pagamentos_12m }}</div>
+    {% if margem_bazin is not none %}
+    <div style="margin-top:6px;">
+      <span class="badge {{ 'badge-pos' if margem_bazin >= 0 else 'badge-neg' }}">
+        {{ 'Margem' if margem_bazin >= 0 else 'Acima do teto' }}: {{ '+' if margem_bazin >= 0 else '' }}{{ margem_bazin | numero_br(2) }}%
+      </span>
+      <div class="margem-barra">
+        <div class="margem-preenchimento {{ 'pos' if margem_bazin >= 0 else 'neg' }}" style="width:{{ dados.Valuation.get('Barra_Bazin_Pct', 50) }}%"></div>
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -175,6 +321,7 @@
       <tr><td>Margem Bruta</td><td><strong>{{ dados.Rentabilidade_e_Eficiencia.Margem_Bruta | percentual_br }}</strong></td></tr>
       <tr><td>Crescimento de Receita (YoY)</td><td><strong>{{ dados.Rentabilidade_e_Eficiencia.Crescimento_Receita_YoY | percentual_br }}</strong></td></tr>
       <tr><td>Crescimento de Lucros (YoY)</td><td><strong>{{ dados.Rentabilidade_e_Eficiencia.Crescimento_Lucros_YoY | percentual_br }}</strong></td></tr>
+      <tr><td>Payout Ratio (Distribuição de Lucro)</td><td><strong>{{ dados.Proventos.Payout_Ratio | percentual_br }}</strong></td></tr>
     </table>
   </div>
   <div class="painel" style="margin-bottom:0;">
@@ -186,6 +333,7 @@
       <tr><td>EBITDA (12m)</td><td><strong>{{ dados.Endividamento_e_Caixa.EBITDA | moeda_grande_br(moeda_bal) }}</strong></td></tr>
       <tr><td>Caixa e Equivalentes</td><td class="pos"><strong>{{ dados.Endividamento_e_Caixa.Caixa_Total | moeda_grande_br(moeda_bal) }}</strong></td></tr>
       <tr><td>Dívida Bruta Total</td><td class="neg"><strong>{{ dados.Endividamento_e_Caixa.Divida_Total | moeda_grande_br(moeda_bal) }}</strong></td></tr>
+      <tr><td>Dívida Líquida</td><td><strong>{{ dados.Endividamento_e_Caixa.Divida_Liquida | moeda_grande_br(moeda_bal) }}</strong></td></tr>
       <tr>
         <td>Alavancagem (Dív. Líq / EBITDA)</td>
         <td>

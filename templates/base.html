@@ -13,8 +13,8 @@
     --borda: rgba(255, 255, 255, 0.09);
     --borda-foco: rgba(56, 189, 248, 0.45);
     --texto: #f8fafc;
-    --suave: #94a3b8;
-    --apagado: #64748b;
+    --suave: #cbd5e1;
+    --apagado: #94a3b8;
     --destaque: #38bdf8;
     --destaque-glow: rgba(56, 189, 248, 0.15);
     --botao: #0284c7;
@@ -135,8 +135,11 @@
   table.tabela tr:hover td { background: rgba(255, 255, 255, 0.02); }
 
   .badge { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 6px; font-size: .75rem; font-weight: 700; background: var(--badge-bg); color: var(--destaque); border: 1px solid rgba(56, 189, 248, 0.25); }
+  .badge-destaque { background: var(--badge-bg); color: var(--destaque); border: 1px solid var(--borda-foco); }
   .badge-pos { background: var(--pos-bg); color: var(--pos); border: 1px solid rgba(52, 211, 153, 0.3); }
   .badge-neg { background: var(--neg-bg); color: var(--neg); border: 1px solid rgba(251, 113, 133, 0.3); }
+  .destaque { color: var(--destaque); font-weight: 700; text-decoration: none; }
+  .destaque:hover { text-decoration: underline; }
   .pos { color: var(--pos); font-weight: 600; }
   .neg { color: var(--neg); font-weight: 600; }
   .erro { background: rgba(127, 29, 29, 0.4); border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
@@ -157,6 +160,11 @@
   }
   footer a { color: var(--suave); text-decoration: underline; text-underline-offset: 3px; }
   footer a:hover { color: var(--destaque); }
+
+  @media (min-width: 1024px) {
+    .container { max-width: 1200px; }
+    .cards-grid { grid-template-columns: repeat(3, 1fr); }
+  }
 
   @media (max-width: 768px) {
     body { padding: 1rem .75rem 2.5rem; }

@@ -127,6 +127,11 @@
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: 16px;
   }
+  @media (min-width: 1024px) {
+    .pillars-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
   .pillar-card {
     background: var(--card);
     border: 1px solid var(--borda);
@@ -300,12 +305,12 @@
         {% for r in painel_ativos %}
         <tr>
           <td>
-            <a data-carrega href="/analisar?ticker={{ r.ticker }}" style="color:var(--destaque); font-weight:700; text-decoration:none;">
+            <a data-carrega href="/analisar?ticker={{ r.ticker }}" class="destaque">
               {{ r.ticker }}
             </a>
           </td>
           <td>{{ r.nome_empresa }}</td>
-          <td><span class="badge">{{ DESCRICAO_TIPO.get(r.tipo_ativo, r.tipo_ativo) }}</span></td>
+          <td><span class="badge badge-destaque">{{ DESCRICAO_TIPO.get(r.tipo_ativo, r.tipo_ativo) }}</span></td>
           <td><strong>{{ r.preco_atual | moeda_br(r.moeda_cotacao or 'BRL') }}</strong></td>
           {% set var_dia = r.variacao_dia_pct or 0 %}
           <td class="{{ 'pos' if var_dia >= 0 else 'neg' }}">

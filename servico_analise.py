@@ -502,6 +502,8 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
 
     margem_graham_pct = round(((graham / preco) - 1) * 100, 2) if graham and preco > 0 else None
     margem_bazin_pct = round(((bazin / preco) - 1) * 100, 2) if bazin and preco > 0 else None
+    barra_graham_pct = round(max(10.0, min(100.0, 50.0 + (margem_graham_pct / 2.0))), 1) if margem_graham_pct is not None else 0.0
+    barra_bazin_pct = round(max(10.0, min(100.0, 50.0 + (margem_bazin_pct / 2.0))), 1) if margem_bazin_pct is not None else 0.0
 
     divida_total = numero(info.get("totalDebt"))
     caixa_total = numero(info.get("totalCash"))
@@ -586,9 +588,11 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
             "Valor_Intrinseco_Graham": graham,
             "Obs_Graham": obs_graham,
             "Margem_Graham_Pct": margem_graham_pct,
+            "Barra_Graham_Pct": barra_graham_pct,
             "Preco_Teto_Bazin_6pct": bazin,
             "Obs_Bazin": obs_bazin,
             "Margem_Bazin_Pct": margem_bazin_pct,
+            "Barra_Bazin_Pct": barra_bazin_pct,
         },
         "Rentabilidade_e_Eficiencia": {
             "ROE": roe,

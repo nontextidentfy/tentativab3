@@ -45,7 +45,7 @@
       <tbody>
         {% for item in itens %}
         <tr>
-          <td><a data-carrega href="/analisar?ticker={{ item.ticker }}" style="color:var(--destaque); font-weight:700; text-decoration:none;">{{ item.ticker }}</a></td>
+          <td><a data-carrega href="/analisar?ticker={{ item.ticker }}" class="destaque">{{ item.ticker }}</a></td>
           <td>
             {% if item.preco_atual is not none %}
               <strong>{{ item.preco_atual | moeda_br }}</strong>
