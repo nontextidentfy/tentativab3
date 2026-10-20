@@ -408,8 +408,18 @@ def api_buscar_ativos(request: Request, q: str = Query("", max_length=60)):
     return JSONResponse({"resultados": svc.buscar_ativos(q, limite=8)})
 
 
+def _cotacao_tem_dados_novos(cotacao: Cotacao) -> bool:
+    dados = cotacao.dados
+    if isinstance(dados, str):
+        try:
+            dados = json.loads(dados)
+        except ValueError:
+            return False
+    return isinstance(dados, dict) and bool(dados.get("Metadados"))
+
+
 def _buscar_cache_ativo(db: Session, ticker_ok: str, limite_minimo: datetime.datetime):
-    return (
+    par = (
         db.query(Ativo, Cotacao)
         .join(Cotacao, Ativo.ultima_cotacao_id == Cotacao.id)
         .filter(
@@ -418,6 +428,9 @@ def _buscar_cache_ativo(db: Session, ticker_ok: str, limite_minimo: datetime.dat
         )
         .first()
     )
+    if par and not _cotacao_tem_dados_novos(par[1]):
+        return None  # registro migrado do formato antigo: trata como sem cache e coleta de novo
+    return par
 
 
 def _montar_resposta_cache(

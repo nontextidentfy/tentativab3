@@ -400,7 +400,12 @@ def extrair_fluxo_pregoes(ativo, vol_medio_referencia: int = 0, hist_pre_carrega
     """
     pregoes = []
     try:
-        hist = hist_pre_carregado if hist_pre_carregado is not None else ativo.history(period="6d")
+        if hist_pre_carregado is not None:
+            hist = hist_pre_carregado
+        elif ativo is not None:
+            hist = ativo.history(period="6d")
+        else:
+            hist = None
         if hist is not None and not hist.empty:
             fechamento_ant = None
             for data_idx, linha in hist.iterrows():
@@ -453,12 +458,12 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     e metadados de moeda/observação. Nenhuma formatação textual (R$, %, Mi/Bi, N/D) ocorre aqui.
     """
     ticker = resolver_ticker(ticker_usuario)
-    ativo = yf.Ticker(f"{ticker}.SA")
+    simbolo_sa = f"{ticker}.SA"
 
     with ThreadPoolExecutor(max_workers=3) as executor:
-        fut_info = executor.submit(lambda: ativo.info or {})
-        fut_div = executor.submit(dividendos_ultimos_12m, ativo)
-        fut_hist = executor.submit(_coletar_historico_seguro, ativo)
+        fut_info = executor.submit(lambda: yf.Ticker(simbolo_sa).info or {})
+        fut_div = executor.submit(dividendos_ultimos_12m, yf.Ticker(simbolo_sa))
+        fut_hist = executor.submit(_coletar_historico_seguro, yf.Ticker(simbolo_sa))
 
         try:
             info = fut_info.result()
@@ -512,11 +517,11 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
             suf = "volume até agora, " if em_pregao else ""
             status_fluxo = f"Estável com volume acima da média ({suf}{round(relacao_volume_media)}% da média 3m)"
         elif em_pregao:
-            status_fluxo = f"Pregão em andamento — volume até agora ({round(relacao_volume_media)}% da média 3m)"
+            status_fluxo = f"Pregão em andamento: volume até agora ({round(relacao_volume_media)}% da média 3m)"
         else:
             status_fluxo = f"Volume Normal ({round(relacao_volume_media)}% da média 3m)"
     else:
-        status_fluxo = "Pregão em andamento — volume até agora" if em_pregao else "Volume em linha com o histórico"
+        status_fluxo = "Pregão em andamento: volume até agora" if em_pregao else "Volume em linha com o histórico"
 
     dy_12m_razao = (dividendos_12m / preco) if preco > 0 else 0.0
     dy_12m_pct = dy_12m_razao * 100.0
@@ -564,7 +569,7 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     enterprise_value = numero(info.get("enterpriseValue"))
 
     historico_5d = extrair_fluxo_pregoes(
-        ativo,
+        None,
         vol_medio_referencia=vol_medio_3m or vol_medio_10d,
         hist_pre_carregado=hist_6d,
     )

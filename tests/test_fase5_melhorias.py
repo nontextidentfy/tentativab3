@@ -146,7 +146,9 @@ def test_5_5_5_6_5_7_zoneinfo_requirements_e_procfile():
     with open(os.path.join(banco.PASTA_PROJETO, "requirements.txt"), "r", encoding="utf-8") as f:
         reqs = f.read()
     assert "gunicorn==" in reqs
+    assert "uvicorn-worker==" in reqs
 
     with open(os.path.join(banco.PASTA_PROJETO, "Procfile"), "r", encoding="utf-8") as f:
         procfile = f.read()
     assert "alembic upgrade head" in procfile
+    assert "uvicorn_worker.UvicornWorker" in procfile

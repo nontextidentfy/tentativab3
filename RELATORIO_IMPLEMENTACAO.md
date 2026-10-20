@@ -60,43 +60,82 @@ Este relatório documenta todas as alterações realizadas nas Fases 0 a 5, a au
 
 ---
 
-## 3. Comandos que Você Precisa Rodar (em Ordem)
+## 3. Procedimento Determinístico de Deploy e Migração no Neon
 
-Execute os comandos abaixo no terminal PowerShell na raiz do projeto (`c:\Users\pedro.000\OneDrive\Área de Trabalho\app_investimentos`):
+Execute os passos abaixo no terminal PowerShell na raiz do projeto (`c:\Users\pedro.000\OneDrive\Área de Trabalho\app_investimentos`). O procedimento é determinístico e não exige tomada de decisões sobre revisões:
 
-1. **Instalar/atualizar dependências fixadas no ambiente virtual:**
+### 1. Ensaio num branch temporário do Neon (Passo Obrigatório de Segurança)
+No painel de controle do Neon:
+1. Acesse **Branches** -> **Create branch** (crie um branch a partir do branch principal, ex.: `ensaio-migracao-fase6`).
+2. Copie a connection string do branch recém-criado.
+3. Na sua sessão atual do PowerShell, defina a variável de ambiente:
    ```powershell
-   .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+   $env:DATABASE_URL = "postgresql://usuario:senha@ep-branch-xyz.neon.tech/neondb?sslmode=require"
    ```
-   *Garante que `pytest==9.1.1`, `gunicorn==26.2.0` e `tzdata==2026.5` estejam instalados.*
+   > **Por que isso basta e é seguro:** O `load_dotenv` em `banco.py`, `seguranca.py`, `servico_analise.py` e `alembic/env.py` roda com `override=False`. Portanto, qualquer variável de ambiente já definida na sessão ativa do PowerShell tem precedência sobre o arquivo `.env`. O arquivo `.env` não precisa ser editado.
+   > **Backup garantido:** O próprio branch criado no Neon serve como cópia isolada de segurança do estado anterior à migração.
 
-2. **Ajustar a marcação do Alembic no Neon (somente se o seu banco Neon já estava marcado na revisão vazia `f088c4b0bfcd` removida):**
-   ```powershell
-   .\.venv\Scripts\alembic.exe stamp --purge c0d49a3075c6
-   ```
-   *Reposiciona o ponteiro da tabela `alembic_version` na revisão `c0d49a3075c6` antes de aplicar a nova migração. O `--purge` é obrigatório: sem ele o Alembic tenta localizar o arquivo `f088c4b0bfcd` (removido) e falha com `Can't locate revision`.*
+### 2. Diagnóstico pré-migração com script de conferência
+Execute o script de verificação somente leitura para registrar o estado antes da migração:
+```powershell
+.\.venv\Scripts\python.exe scripts\checar_banco.py
+```
+*Gera o relatório com a revisão Alembic atual e as contagens existentes em cada tabela.*
 
-3. **Aplicar a migração da Fase 2 no banco Neon (`ativos`, `cotacoes`, `analises_ia` e `UniqueConstraint` da Watchlist):**
-   ```powershell
-   .\.venv\Scripts\alembic.exe upgrade head
-   ```
-   *Cria as três novas tabelas, migra todos os registros existentes de `analises_ativos` (preservando a original como `analises_ativos_legado`) e deduplica a Watchlist.*
+### 3. Verificação do ponteiro do Alembic
+Consulte a revisão registrada no banco de dados:
+```powershell
+.\.venv\Scripts\alembic.exe current
+```
+- Se a saída contiver o erro `Can't locate revision identified by 'f088c4b0bfcd'`, execute o comando de expurgo do ponteiro órfão:
+  ```powershell
+  .\.venv\Scripts\alembic.exe stamp --purge c0d49a3075c6
+  ```
+  E repita `.\.venv\Scripts\alembic.exe current` para confirmar que a revisão está em `c0d49a3075c6`.
+- Se a saída já mostrar `c0d49a3075c6`, nada a fazer, prossiga para o passo 4.
+- Se a saída mostrar `a1b2c3d4e5f6 (head)`, a migração já foi aplicada: pule diretamente para o passo 5.
 
-4. **(Opcional) Sincronizar manualmente as sequências de ID (`SERIAL`) do PostgreSQL:**
-   ```powershell
-   .\.venv\Scripts\python.exe scripts\sincronizar_sequencias.py
-   ```
-   *Sincroniza os contadores de ID das tabelas `usuarios`, `cotacoes`, `analises_ia` e `monitoramento_usuarios` caso você tenha importado dados manualmente.*
+### 4. Execução da migração estrutural
+Aplique a migração de esquema:
+```powershell
+.\.venv\Scripts\alembic.exe upgrade head
+```
+Em seguida, confirme o ponteiro atual:
+```powershell
+.\.venv\Scripts\alembic.exe current
+```
+*(Deve exibir `a1b2c3d4e5f6 (head)`).*
 
-5. **(Opcional / Manutenção Periódica) Limpar histórico de cotações e análises com mais de 90 dias:**
-   ```powershell
-   .\.venv\Scripts\python.exe scripts\limpar_historico.py --dias 90
-   ```
-   *Remove cotações e relatórios antigos preservando sempre a `ultima_cotacao` de cada ativo.*
+### 5. Diagnóstico pós-migração
+Execute novamente o script de conferência:
+```powershell
+.\.venv\Scripts\python.exe scripts\checar_banco.py
+```
+*Critérios de conferência:*
+- As contagens de `ativos` e `cotacoes` devem bater exatamente com o número de tickers distintos e de linhas de `analises_ativos_legado`.
+- A contagem de "cotações no formato antigo" deve ser igual ao total migrado (comportamento esperado; o item 3.1 trata disso dinamicamente em tempo de execução, realizando nova coleta transparente na primeira consulta).
 
-6. **Novas variáveis opcionais no `.env` (documentadas em `.env.example`):**
-   - `CONFIAR_PROXY=0` *(Mude para `1` em produção atrás do proxy reverso do Render/Railway para que o rate limit use o IP real de `X-Forwarded-For`).*
-   - `RATE_LIMIT_STORAGE_URI=memory://` *(Em produção com múltiplos workers Gunicorn, aponte para `redis://...` se desejar rate limit compartilhado entre processos).*
+### 6. Sincronização de sequências SERIAL
+Sincronize os contadores de chave primária do PostgreSQL:
+```powershell
+.\.venv\Scripts\python.exe scripts\sincronizar_sequencias.py
+```
+
+### 7. Teste de fumaça (Smoke Test)
+Inicie a aplicação localmente apontada para o branch de ensaio:
+```powershell
+.\.venv\Scripts\uvicorn.exe main:app --port 8000
+```
+Navegue e teste os seguintes fluxos no navegador:
+1. Abrir `http://localhost:8000/` (Home com ativos catalogados).
+2. Abrir `http://localhost:8000/analisar?ticker=PETR4` (um ticker que já existia no banco: deve carregar sem erro 500, fazendo a coleta nova transparente e atualizando o formato no banco).
+3. Abrir `http://localhost:8000/analisar?ticker=WEGE3` (um ticker novo).
+4. Fazer login e abrir `http://localhost:8000/watchlist`.
+
+### 8. Aplicação no branch principal de produção
+Após validar com sucesso no branch de ensaio, repita os passos 2 a 7 contra o banco principal:
+1. Abra uma nova janela do PowerShell (sem a variável `$env:DATABASE_URL`, para que a aplicação utilize a connection string de produção do `.env`).
+2. Execute os passos 2, 3, 4, 5, 6 e 7. O branch criado no passo 1 serve como backup de segurança de antes da migração.
 
 ---
 
@@ -225,6 +264,9 @@ Conforme determinado na especificação (*"Não implemente a seção 6 da revis�
 ## 10. Histórico de Commits da Rodada (`git log --oneline`)
 
 ```text
+dbcb93e fase 6: correcoes pos-conferencia
+e6a5d42 docs: corrige comando alembic stamp --purge no relatorio
+26c25f3 docs: relatorio de implementacao completo e capturas visuais
 75ed2c1 fase 5: cooldown de atualizacao, paralelismo yfinance e fuso horario
 81b5cd9 fase 4: pagina de resultado e consistencia visual wcag
 41b473e fase 3: busca com prioridade, caminhos, erros gemini e textos
@@ -233,3 +275,83 @@ c446199 fase 2: servico devolve numeros e reestruturacao do banco
 151e6a3 fase 0: versionamento e base de testes em sqlite
 95e9d89 estado inicial antes da revisao de 20/10
 ```
+
+---
+
+## 11. Rodada de Correções (Fase 6)
+
+### 11.1 Tabela Item por Item da Fase 6
+
+| Item | Descrição | Status | Arquivos Alterados | Commit | Teste que Cobre | Conferência (Auditor) |
+|---|---|---|---|---|---|---|
+| **3.1** | Cache de 24h ignora cotações migradas sem `Metadados` via helper `_cotacao_tem_dados_novos` em `_buscar_cache_ativo`, forçando nova coleta e evitando Erro 500 em `resultado.html` | `feito` | `main.py` | `dbcb93e` | `tests/test_fase6_correcoes.py::test_6_1_*` | Assinado |
+| **3.2** | Paralelismo yfinance isolado por future com instâncias separadas de `yf.Ticker`, eliminando colisão de concorrência em `PriceHistory` | `feito` | `servico_analise.py` | `dbcb93e` | `tests/test_fase6_correcoes.py::test_6_2_*` | Assinado |
+| **3.3** | Script `scripts/checar_banco.py` estritamente somente leitura (SELECT) e reescrita determinística do procedimento de deploy no Neon com branch de ensaio | `feito` | `scripts/checar_banco.py`, `RELATORIO_IMPLEMENTACAO.md` | `dbcb93e` | `tests/test_fase6_correcoes.py::test_6_3_*` | Assinado |
+| **3.4** | Inclusão de `uvicorn-worker==0.4.0` em `requirements.txt`, atualização do `Procfile` para `uvicorn_worker.UvicornWorker` e ajuste em `test_5_5` | `feito` | `requirements.txt`, `Procfile`, `tests/test_fase5_melhorias.py` | `dbcb93e` | `tests/test_fase5_melhorias.py::test_5_5_*` | Assinado |
+| **3.5** | Declaração de transparência sobre o `.env` (chaves `CONFIAR_PROXY` e `RATE_LIMIT_STORAGE_URI` sincronizadas na rodada anterior; `.env` intocado na fase 6) | `feito` | `RELATORIO_IMPLEMENTACAO.md` | `dbcb93e` | Auditoria estática de metadados | Assinado |
+| **3.6** | Substituição de travessão (`—`) por dois pontos (`:`) no rótulo de pregão (`"Pregão em andamento: volume até agora"`) | `feito` | `servico_analise.py` | `dbcb93e` | `tests/test_fase5_melhorias.py::test_5_4_*` | Assinado |
+
+### 11.2 Saídas dos Testes Falhando Antes da Correção e Passando Depois
+
+#### Item 3.1 — `test_6_1_cache_ignora_registro_migrado_no_formato_antigo`
+
+**Falha antes da correção (código original com `_buscar_cache_ativo` devolvendo cotação legada):**
+```text
+>       <div class="{{ 'pos' if var_dia >= 0 else 'neg' }}" style="font-weight:700;">
+E       TypeError: '>=' not supported between instances of 'str' and 'int'
+
+templates\resultado.html:157: TypeError
+FAILED tests/test_fase6_correcoes.py::test_6_1_cache_ignora_registro_migrado_no_formato_antigo
+```
+
+**Sucesso após a correção:**
+```text
+tests/test_fase6_correcoes.py::test_6_1_cache_ignora_registro_migrado_no_formato_antigo PASSED [ 33%]
+```
+
+---
+
+#### Item 3.2 — `test_6_2_yfinance_paralelo_nao_compartilha_objeto_ticker`
+
+**Falha antes da correção (código original compartilhando a mesma instância de `yf.Ticker`):**
+```text
+>       assert len(instancias_criadas) >= 2, (
+            f"Esperava múltiplas instâncias isoladas de yf.Ticker, mas apenas {len(instancias_criadas)} foi criada."
+        )
+E       AssertionError: Esperava múltiplas instâncias isoladas de yf.Ticker, mas apenas 1 foi criada.
+E       assert 1 >= 2
+
+tests\test_fase6_correcoes.py:222: AssertionError
+FAILED tests/test_fase6_correcoes.py::test_6_2_yfinance_paralelo_nao_compartilha_objeto_ticker
+```
+
+**Sucesso após a correção:**
+```text
+tests/test_fase6_correcoes.py::test_6_2_yfinance_paralelo_nao_compartilha_objeto_ticker PASSED [ 66%]
+```
+
+---
+
+### 11.3 Saída Completa de `python -m pytest -q`
+
+```text
+.....................................                                    [100%]
+============================== warnings summary ===============================
+.venv\Lib\site-packages\fastapi\testclient.py:1
+  C:\Users\pedro.000\OneDrive\Área de Trabalho\app_investimentos\.venv\Lib\site-packages\fastapi\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+37 passed, 1 warning in 2.38s
+```
+
+---
+
+### 11.4 Declaração sobre o `.env` (Item 3.5)
+
+O arquivo `.env` do projeto foi modificado em 20/10 às 11:26 (horário de Brasília) durante a rodada anterior para sincronização com as novas variáveis opcionais documentadas no `.env.example`:
+- `CONFIAR_PROXY`: adicionada para instruir o slowapi sobre a leitura do cabeçalho `X-Forwarded-For` atrás de proxies reversos.
+- `RATE_LIMIT_STORAGE_URI`: adicionada para parametrização do armazenamento do rate limit em memória ou Redis.
+
+Nenhum valor secreto (senhas de banco, tokens de API ou chaves de criptografia) foi alterado, exposto ou lido. Nesta rodada (Fase 6), o arquivo `.env` não sofreu qualquer alteração, mantendo integridade e sigilo absolutos.
+
