@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="painel" style="max-width:480px; margin:2rem auto;">
+  {% if modo == "cadastro" %}
+    <h3>🔐 Criar Conta Segura</h3>
+    <form method="post" action="/cadastro" style="display:flex; flex-direction:column; gap:12px;">
+      <div>
+        <label style="font-size:.82rem; color:var(--suave);">Nome Completo</label>
+        <input class="input-padrao" type="text" name="nome" required minlength="2" placeholder="Seu nome">
+      </div>
+      <div>
+        <label style="font-size:.82rem; color:var(--suave);">E-mail</label>
+        <input class="input-padrao" type="email" name="email" required placeholder="seu@email.com">
+      </div>
+      <div>
+        <label style="font-size:.82rem; color:var(--suave);">Senha (mínimo 8 caracteres, protegida com Argon2)</label>
+        <input class="input-padrao" type="password" name="senha" required minlength="8" placeholder="••••••••">
+      </div>
+      <div>
+        <label style="font-size:.82rem; color:var(--suave);">Foco de Análise</label>
+        <select class="input-padrao" name="perfil">
+          <option value="Fundamentalista">Fundamentalista / Valuation</option>
+          <option value="Dividendos">Dividendos & Renda Passiva</option>
+          <option value="FIIs">Fundos Imobiliários (FIIs)</option>
+          <option value="Fluxo">Fluxo de Volume & Liquidez</option>
+        </select>
+      </div>
+      <label style="font-size:.82rem; color:var(--suave); display:flex; gap:8px; align-items:flex-start; cursor:pointer;">
+        <input type="checkbox" name="aceite_termos" value="sim" required style="margin-top:4px;">
+        <span>Li e concordo com os <a href="/termos" target="_blank" style="color:var(--destaque);">Termos de Uso e Política de Privacidade (LGPD)</a>.</span>
+      </label>
+      <button type="submit">Criar Minha Conta</button>
+    </form>
+    <p style="text-align:center; font-size:.85rem; color:var(--suave); margin-top:1rem;">
+      Já possui conta? <a href="/login" style="color:var(--destaque);">Fazer Login</a>
+    </p>
+
+  {% elif modo == "esqueci" %}
+    <h3>🔑 Recuperar Senha</h3>
+    <p style="font-size:.88rem; color:var(--suave);">Informe seu e-mail para receber um link seguro de redefinição (válido por 1 hora).</p>
+    <form method="post" action="/esqueci-senha" style="display:flex; flex-direction:column; gap:12px;">
+      <input class="input-padrao" type="email" name="email" required placeholder="seu@email.com">
+      <button type="submit">Enviar Link de Recuperação</button>
+    </form>
+    <p style="text-align:center; font-size:.85rem; margin-top:1rem;">
+      <a href="/login" style="color:var(--destaque);">Voltar para o Login</a>
+    </p>
+
+  {% elif modo == "redefinir" %}
+    <h3>🔒 Definir Nova Senha</h3>
+    <form method="post" action="/redefinir-senha/{{ token }}" style="display:flex; flex-direction:column; gap:12px;">
+      <label style="font-size:.82rem; color:var(--suave);">Nova Senha (mínimo 8 caracteres)</label>
+      <input class="input-padrao" type="password" name="nova_senha" required minlength="8" placeholder="••••••••">
+      <button type="submit">Salvar Nova Senha</button>
+    </form>
+
+  {% else %}
+    <h3>🔑 Entrar na Plataforma</h3>
+    <form method="post" action="/login" style="display:flex; flex-direction:column; gap:12px;">
+      <div>
+        <label style="font-size:.82rem; color:var(--suave);">E-mail</label>
+        <input class="input-padrao" type="email" name="email" required placeholder="seu@email.com">
+      </div>
+      <div>
+        <label style="font-size:.82rem; color:var(--suave);">Senha</label>
+        <input class="input-padrao" type="password" name="senha" required placeholder="••••••••">
+      </div>
+      <button type="submit">Entrar</button>
+    </form>
+    <div style="display:flex; justify-content:space-between; font-size:.84rem; margin-top:1rem;">
+      <a href="/esqueci-senha" style="color:var(--suave);">Esqueci minha senha</a>
+      <a href="/cadastro" style="color:var(--destaque); font-weight:600;">Criar conta gratuita</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

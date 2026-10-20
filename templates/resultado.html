@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}{{ dados.Identificacao.Ticker }} — Raio-X Fundamentalista | Investidor IA{% endblock %}
+
+{% block extra_css %}
+<style>
+  .topo-ativo { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start;
+                gap:15px; background:var(--card); padding:1.35rem; border-radius:10px; border:1px solid var(--borda); }
+  .faixa-barra { position:relative; height:8px; background:linear-gradient(90deg,var(--neg),#facc15,var(--pos));
+                 border-radius:4px; margin:14px 8px 8px; }
+  .faixa-marcador { position:absolute; top:-5px; width:18px; height:18px; border-radius:50%; background:var(--texto);
+                    border:3px solid var(--bg); transform:translateX(-50%); }
+  .faixa-legenda { display:flex; justify-content:space-between; font-size:.8rem; color:var(--suave); flex-wrap:wrap; }
+  .report-box { background:var(--card); border:1px solid var(--borda); border-radius:10px; padding:1.5rem; }
+  .report-content { color:#cbd5e1; line-height:1.65; }
+  .report-content h3 { color:var(--destaque); font-size:1.05rem; margin:1.3rem 0 .4rem; }
+  .report-content blockquote { border-left:3px solid var(--destaque); margin:0 0 1rem; padding-left:12px; color:var(--suave); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="topo-ativo">
+  <div>
+    <h2 style="margin:0 0 4px; font-size:1.75rem;">
+      {{ dados.Identificacao.Ticker }}
+      <span class="badge">{{ dados.Identificacao.Tipo_Ativo }}</span>
+    </h2>
+    <div style="color:var(--suave); font-size:.92rem;">
+      {{ dados.Identificacao.Nome_Empresa }} • Setor: {{ dados.Identificacao.Setor }} ({{ dados.Identificacao.Industria }})
+    </div>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-size:1.95rem; font-weight:800;">{{ dados.Cotacao_e_Mercado.Preco_Atual }}</div>
+    <div class="{{ 'pos' if dados.Numeros.variacao_dia_pct >= 0 else 'neg' }}" style="font-weight:700;">
+      {{ dados.Cotacao_e_Mercado.Variacao_Dia }} no pregão
+    </div>
+  </div>
+</div>
+
+<div class="secao-titulo">📈 Monitor de Liquidez & Fluxo de Volume (Entrada e Saída)</div>
+<div class="cards-grid">
+  <div class="card">
+    <div class="title">Volume Financeiro (Dia)</div>
+    <div class="value">{{ dados.Fluxo_e_Volume.Volume_Financeiro_Dia }}</div>
+    <div class="detail">{{ dados.Fluxo_e_Volume.Status_Fluxo }}</div>
+  </div>
+  <div class="card">
+    <div class="title">Papéis Negociados</div>
+    <div class="value">{{ dados.Fluxo_e_Volume.Volume_Acoes_Dia }}</div>
+    <div class="detail">Média 10d: {{ dados.Fluxo_e_Volume.Volume_Medio_10d }}</div>
+  </div>
+  <div class="card">
+    <div class="title">Média de Volume (3m)</div>
+    <div class="value">{{ dados.Fluxo_e_Volume.Volume_Medio_3m }}</div>
+    <div class="detail">Beta: {{ dados.Fluxo_e_Volume.Beta_Volatilidade }}</div>
+  </div>
+  <div class="card">
+    <div class="title">Banda do Dia</div>
+    <div class="value" style="font-size:1.1rem;">{{ dados.Cotacao_e_Mercado.Faixa_Dia }}</div>
+    <div class="detail">Abertura: {{ dados.Cotacao_e_Mercado.Abertura_Dia }}</div>
+  </div>
+</div>
+
+<div class="painel">
+  <h3>📊 Histórico de Fluxo nos Últimos 5 Pregões</h3>
+  <div style="overflow-x:auto;">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Data</th><th>Fechamento</th><th>Variação</th>
+          <th>Qtd. Negociada</th><th>Volume Financeiro</th><th>Sinal de Fluxo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in dados.Fluxo_e_Volume.Pregoes_Recentes %}
+        <tr>
+          <td>{{ p.data }}</td>
+          <td><strong>{{ p.fechamento }}</strong></td>
+          <td class="{{ 'pos' if p.variacao_pct >= 0 else 'neg' }}">
+            {{ '+' if p.variacao_pct >= 0 else '' }}{{ p.variacao_pct | moeda_br }}%
+          </td>
+          <td>{{ p.volume_acoes }}</td>
+          <td>{{ p.volume_financeiro }}</td>
+          <td><strong class="{{ 'pos' if p.variacao_pct > 0.15 else ('neg' if p.variacao_pct < -0.15 else '') }}">{{ p.fluxo }}</strong></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">Histórico diário indisponível no momento.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="secao-titulo">📐 Múltiplos de Valuation & Preços de Referência</div>
+<div class="cards-grid">
+  <div class="card">
+    <div class="title">P/L Atual</div>
+    <div class="value">{{ dados.Valuation.P_L }}</div>
+    <div class="detail">Projetado: {{ dados.Valuation.P_L_Projetado }}</div>
+  </div>
+  <div class="card">
+    <div class="title">P/VP</div>
+    <div class="value">{{ dados.Valuation.P_VP }}</div>
+    <div class="detail">VPA: R$ {{ dados.Valuation.VPA }}</div>
+  </div>
+  <div class="card">
+    <div class="title">EV / EBITDA</div>
+    <div class="value">{{ dados.Valuation.EV_EBITDA }}</div>
+    <div class="detail">LPA: R$ {{ dados.Valuation.LPA }}</div>
+  </div>
+  <div class="card">
+    <div class="title">Dividend Yield (12m)</div>
+    <div class="value pos">{{ dados.Proventos.Dividend_Yield_Real_12m }}</div>
+    <div class="detail">{{ dados.Proventos.Total_Pago_12m_por_Cota }} / cota</div>
+  </div>
+  <div class="card">
+    <div class="title">Preço Justo Graham</div>
+    <div class="value" style="font-size:1.15rem;">{{ dados.Valuation.Valor_Intrinseco_Graham }}</div>
+    <div class="detail">Fórmula √(22,5 × LPA × VPA)</div>
+  </div>
+  <div class="card">
+    <div class="title">Preço Teto Bazin (6%)</div>
+    <div class="value" style="font-size:1.15rem;">{{ dados.Valuation.Preco_Teto_Bazin_6pct }}</div>
+    <div class="detail">{{ dados.Proventos.Frequencia_Pagamentos_12m }}</div>
+  </div>
+</div>
+
+{% if dados.Numeros.min_52s and dados.Numeros.max_52s %}
+<div class="painel">
+  <div style="font-size:.78rem; color:var(--suave); text-transform:uppercase;">Termômetro de Preço — Faixa de 52 Semanas</div>
+  <div class="faixa-barra">
+    <div class="faixa-marcador" style="left:{{ dados.Numeros.pos_52s }}%"></div>
+  </div>
+  <div class="faixa-legenda">
+    <span>Mínima 52s: {{ dados.Cotacao_e_Mercado.Minima_52_Semanas }}</span>
+    <span>Cotação Atual: {{ dados.Cotacao_e_Mercado.Preco_Atual }} ({{ dados.Numeros.pos_52s }}% da banda anual)</span>
+    <span>Máxima 52s: {{ dados.Cotacao_e_Mercado.Maxima_52_Semanas }}</span>
+  </div>
+</div>
+{% endif %}
+
+<div class="secao-titulo">📑 Documentação Contábil (Balanço Patrimonial & Eficiência)</div>
+<div class="grid-duplo">
+  <div class="painel" style="margin-bottom:0;">
+    <h3>Eficiência Operacional & Margens</h3>
+    <table class="tabela">
+      <tr><td>ROE (Retorno s/ Patrimônio)</td><td><strong>{{ dados.Rentabilidade_e_Eficiencia.ROE }}</strong></td></tr>
+      <tr><td>ROA (Retorno s/ Ativos)</td><td><strong>{{ dados.Rentabilidade_e_Eficiencia.ROA }}</strong></td></tr>
+      <tr><td>Margem Líquida</td><td><strong>{{ dados.Rentabilidade_e_Eficiencia.Margem_Liquida }}</strong></td></tr>
+      <tr><td>Margem EBITDA</td><td><strong>{{ dados.Rentabilidade_e_Eficiencia.Margem_EBITDA }}</strong></td></tr>
+      <tr><td>Margem Bruta</td><td><strong>{{ dados.Rentabilidade_e_Eficiencia.Margem_Bruta }}</strong></td></tr>
+      <tr><td>Crescimento de Receita (YoY)</td><td><strong>{{ dados.Rentabilidade_e_Eficiencia.Crescimento_Receita_YoY }}</strong></td></tr>
+      <tr><td>Crescimento de Lucros (YoY)</td><td><strong>{{ dados.Rentabilidade_e_Eficiencia.Crescimento_Lucros_YoY }}</strong></td></tr>
+    </table>
+  </div>
+  <div class="painel" style="margin-bottom:0;">
+    <h3>Estrutura de Capital, Caixa & Dívida</h3>
+    <table class="tabela">
+      <tr><td>Valor de Mercado (Market Cap)</td><td><strong>{{ dados.Cotacao_e_Mercado.Valor_de_Mercado }}</strong></td></tr>
+      <tr><td>Enterprise Value (EV)</td><td><strong>{{ dados.Cotacao_e_Mercado.Enterprise_Value_EV }}</strong></td></tr>
+      <tr><td>Receita Líquida (12m)</td><td><strong>{{ dados.Endividamento_e_Caixa.Receita_Total_12m }}</strong></td></tr>
+      <tr><td>EBITDA (12m)</td><td><strong>{{ dados.Endividamento_e_Caixa.EBITDA }}</strong></td></tr>
+      <tr><td>Caixa e Equivalentes</td><td class="pos"><strong>{{ dados.Endividamento_e_Caixa.Caixa_Total }}</strong></td></tr>
+      <tr><td>Dívida Bruta Total</td><td class="neg"><strong>{{ dados.Endividamento_e_Caixa.Divida_Total }}</strong></td></tr>
+      <tr><td>Alavancagem (Dív. Líq / EBITDA)</td><td><strong>{{ dados.Endividamento_e_Caixa.Divida_Liquida_sobre_EBITDA }}</strong></td></tr>
+      <tr><td>Geração de Fluxo de Caixa Livre</td><td><strong>{{ dados.Endividamento_e_Caixa.Fluxo_Caixa_Livre }}</strong></td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="report-box">
+  <h3 style="color:var(--destaque); margin-top:0;">🤖 Diagnóstico Fundamentalista & Análise de Fluxo ({{ motor }})</h3>
+  <div class="report-content">
+    {{ relatorio_html | safe }}
+  </div>
+  <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--borda); font-size:0.82rem; color:var(--apagado);">
+    <span>Origem: {{ origem }} • Atualizado em {{ data_dados | horario_br }} (Horário de Brasília)</span>
+    <div style="display:flex; gap:8px;">
+      <a href="/" class="btn btn-sec">⬅ Voltar ao Painel</a>
+      <a data-carrega href="/analisar?ticker={{ dados.Identificacao.Ticker }}&atualizar=1" class="btn btn-sec">🔄 Forçar Atualização</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

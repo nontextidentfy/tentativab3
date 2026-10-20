@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Investidor IA | Valuation, Balanços & Fluxo B3{% endblock %}</title>
+<style>
+  :root {
+    --bg: #070b12;
+    --card: rgba(15, 23, 42, 0.78);
+    --card-alt: rgba(11, 18, 32, 0.88);
+    --card-hover: rgba(30, 41, 59, 0.85);
+    --borda: rgba(255, 255, 255, 0.09);
+    --borda-foco: rgba(56, 189, 248, 0.45);
+    --texto: #f8fafc;
+    --suave: #94a3b8;
+    --apagado: #64748b;
+    --destaque: #38bdf8;
+    --destaque-glow: rgba(56, 189, 248, 0.15);
+    --botao: #0284c7;
+    --botao-hover: #0369a1;
+    --pos: #34d399;
+    --pos-bg: rgba(52, 211, 153, 0.12);
+    --neg: #fb7185;
+    --neg-bg: rgba(251, 113, 133, 0.12);
+    --badge-bg: rgba(56, 189, 248, 0.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 1.5rem 1rem 3.5rem;
+    background: var(--bg);
+    background-image: radial-gradient(circle at 50% -15%, rgba(56, 189, 248, 0.1) 0%, rgba(7, 11, 18, 0) 65%);
+    color: var(--texto);
+    line-height: 1.55;
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1160px; margin: 0 auto; }
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;
+    padding-bottom: 1.25rem; margin-bottom: 1.75rem; border-bottom: 1px solid var(--borda);
+  }
+  .brand h1 {
+    color: var(--destaque); margin: 0; font-size: 1.55rem; letter-spacing: -0.025em; font-weight: 800;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .brand a { color: inherit; text-decoration: none; }
+  .brand p { color: var(--suave); margin: 3px 0 0; font-size: .88rem; }
+  .nav-links { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+  .search-box {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 1.5rem; background: var(--card-alt);
+    padding: 12px; border-radius: 12px; border: 1px solid var(--borda);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.35);
+  }
+  .search-box input, .input-padrao {
+    flex: 1 1 200px; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--borda);
+    background: rgba(7, 11, 18, 0.7); color: var(--texto); font-size: .95rem; width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .search-box input:focus, .input-padrao:focus {
+    outline: none; border-color: var(--destaque); box-shadow: 0 0 0 3px var(--destaque-glow);
+  }
+
+  .busca-wrap { position: relative; flex: 1 1 260px; display: flex; }
+  .busca-wrap input { flex: 1 1 auto; }
+  .sugestoes {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 50; list-style: none;
+    margin: 0; padding: 6px; background: rgba(15, 23, 42, 0.98); border: 1px solid var(--borda);
+    border-radius: 10px; box-shadow: 0 16px 36px rgba(0,0,0,.6); max-height: 320px; overflow-y: auto;
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  }
+  .sugestoes li {
+    display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 6px;
+    cursor: pointer; font-size: .9rem; transition: background 0.12s;
+  }
+  .sugestoes li strong { color: var(--destaque); min-width: 68px; font-weight: 700; }
+  .sugestoes li span { color: var(--suave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sugestoes li.ativo, .sugestoes li:hover { background: var(--card-hover); }
+  .sugestoes li.vazio { cursor: default; color: var(--apagado); }
+
+  button, .btn {
+    padding: 11px 20px; border-radius: 8px; border: none; background: var(--botao); color: #fff;
+    font-weight: 600; cursor: pointer; font-size: .92rem; text-decoration: none; display: inline-flex;
+    align-items: center; justify-content: center; gap: 6px; transition: all 0.15s ease-in-out;
+  }
+  button:hover, .btn:hover { background: var(--botao-hover); transform: translateY(-1px); }
+  .btn-sec {
+    background: var(--card); border: 1px solid var(--borda); color: var(--texto); padding: 8px 14px; font-size: .85rem;
+    backdrop-filter: blur(8px);
+  }
+  .btn-sec:hover { border-color: var(--destaque); color: var(--destaque); background: var(--card-hover); }
+  .btn-destaque {
+    background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%);
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+  }
+  .btn-destaque:hover {
+    background: linear-gradient(135deg, #0369a1 0%, #1d4ed8 100%);
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
+  }
+  .btn-perigo { background: #7f1d1d; color: #fecaca; border: 1px solid #991b1b; padding: 8px 14px; font-size: .85rem; }
+  .btn-perigo:hover { background: #991b1b; }
+
+  .painel {
+    background: var(--card); border: 1px solid var(--borda); border-radius: 14px; padding: 1.5rem;
+    margin-bottom: 1.75rem; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+  }
+  .painel h3 { margin: 0 0 1rem; font-size: 1.1rem; color: var(--destaque); font-weight: 700; letter-spacing: -0.01em; }
+  .secao-titulo {
+    font-size: .85rem; color: var(--destaque); text-transform: uppercase; letter-spacing: .08em;
+    margin: 2rem 0 .85rem; font-weight: 700; display: flex; align-items: center; gap: 8px;
+  }
+
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 1.5rem; }
+  .card {
+    background: var(--card); padding: 1.15rem; border-radius: 10px; border: 1px solid var(--borda);
+    transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+  .card:hover { transform: translateY(-2px); border-color: rgba(56, 189, 248, 0.3); box-shadow: 0 8px 24px rgba(0,0,0,0.35); }
+  .card .title { font-size: .75rem; color: var(--suave); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  .card .value { font-size: 1.35rem; font-weight: 700; margin-top: 5px; font-variant-numeric: tabular-nums; }
+  .card .detail { font-size: .78rem; color: var(--apagado); margin-top: 4px; }
+
+  .grid-duplo { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; margin-bottom: 1.75rem; }
+  table.tabela { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  table.tabela th, table.tabela td { padding: 11px 10px; border-bottom: 1px solid var(--borda); text-align: left; }
+  table.tabela th { color: var(--suave); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+  table.tabela tr:last-child td { border-bottom: none; }
+  table.tabela tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+  .badge { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 6px; font-size: .75rem; font-weight: 700; background: var(--badge-bg); color: var(--destaque); border: 1px solid rgba(56, 189, 248, 0.25); }
+  .badge-pos { background: var(--pos-bg); color: var(--pos); border: 1px solid rgba(52, 211, 153, 0.3); }
+  .badge-neg { background: var(--neg-bg); color: var(--neg); border: 1px solid rgba(251, 113, 133, 0.3); }
+  .pos { color: var(--pos); font-weight: 600; }
+  .neg { color: var(--neg); font-weight: 600; }
+  .erro { background: rgba(127, 29, 29, 0.4); border: 1px solid #7f1d1d; color: #fca5a5; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+  .sucesso { background: rgba(6, 78, 59, 0.4); border: 1px solid #047857; color: #a7f3d0; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+
+  .loading { text-align: center; color: var(--suave); padding: 2.25rem; background: var(--card-alt); border-radius: 12px; border: 1px solid var(--borda); margin-bottom: 1.5rem; }
+  .spinner { width: 36px; height: 36px; border: 3px solid rgba(255, 255, 255, 0.1); border-top-color: var(--destaque); border-radius: 50%; margin: 0 auto .75rem; animation: gira .8s linear infinite; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+
+  footer {
+    margin-top: 3.5rem; padding-top: 1.75rem; border-top: 1px solid var(--borda); font-size: .82rem;
+    color: var(--apagado); text-align: center; line-height: 1.6;
+  }
+  footer a { color: var(--suave); text-decoration: underline; text-underline-offset: 3px; }
+  footer a:hover { color: var(--destaque); }
+
+  @media (max-width: 768px) {
+    body { padding: 1rem .75rem 2.5rem; }
+    .topbar { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .nav-links { width: 100%; justify-content: flex-start; }
+    .painel { padding: 1.15rem; }
+    table.tabela { font-size: .82rem; }
+    table.tabela th, table.tabela td { padding: 8px 6px; }
+  }
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <div class="brand">
+      <h1><a href="/">📊 Investidor IA</a></h1>
+      <p>Terminal de Documentação Financeira, Fluxo de Volume & Valuation da B3</p>
+    </div>
+    <div class="nav-links">
+      <a class="btn btn-sec" href="/">🌐 Painel B3</a>
+      {% if usuario %}
+        <a class="btn btn-sec" href="/watchlist">⭐ Minha Watchlist ({{ usuario.nome.split()[0] }})</a>
+        <a class="btn btn-sec" href="/logout">Sair</a>
+      {% else %}
+        <a class="btn btn-sec" href="/login">Entrar</a>
+        <a class="btn btn-destaque" style="padding:8px 16px; font-size:.85rem;" href="/cadastro">Criar Conta</a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% block barra_busca_padrao %}
+  <form class="search-box" method="get" action="/analisar" autocomplete="off">
+    <div class="busca-wrap">
+      <input type="text" id="campo-busca" name="ticker" value="{{ dados.Identificacao.Ticker if dados else '' }}"
+             placeholder="Digite o nome da empresa ou o ticker (Ex: Sanepar, Petrobras, Itaú, VALE3, HGLG11)..."
+             required minlength="2" maxlength="60" autocomplete="off" spellcheck="false"
+             role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugestoes-busca">
+      <ul id="sugestoes-busca" class="sugestoes" role="listbox" hidden></ul>
+    </div>
+    <button type="submit" id="btn-submit">Extrair Raio-X</button>
+  </form>
+  {% endblock %}
+
+  <div id="loading" class="loading" hidden>
+    <div class="spinner"></div>
+    <strong>Consultando B3 e processando análise fundamentalista...</strong>
+  </div>
+
+  {% if error_msg %}
+  <div class="erro">⚠️ {{ error_msg }}</div>
+  {% endif %}
+
+  {% if success_msg %}
+  <div class="sucesso">✅ {{ success_msg }}</div>
+  {% endif %}
+
+  <main id="conteudo">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    Plataforma de consulta e documentação financeira baseada em dados públicos de mercado.<br>
+    As informações têm caráter estritamente educativo e analítico, não configurando recomendação de investimento (CVM).<br>
+    <div style="margin-top:8px;">
+      <a href="/termos">Termos de Uso, Isenção CVM e Política de Privacidade (LGPD)</a>
+    </div>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var form = document.querySelector('.search-box');
+  var botao = document.getElementById('btn-submit');
+  var loading = document.getElementById('loading');
+  var conteudo = document.getElementById('conteudo');
+  function ativarLoading() {
+    if (loading) loading.hidden = false;
+    if (conteudo) conteudo.style.opacity = '0.35';
+    if (botao) { botao.disabled = true; botao.textContent = 'Processando...'; }
+  }
+  if (form) form.addEventListener('submit', ativarLoading);
+  document.querySelectorAll('a[data-carrega]').forEach(function (link) {
+    link.addEventListener('click', ativarLoading);
+  });
+  window.addEventListener('pageshow', function () {
+    if (loading) loading.hidden = true;
+    if (conteudo) conteudo.style.opacity = '1';
+    if (botao) { botao.disabled = false; botao.textContent = 'Extrair Raio-X'; }
+  });
+
+  // -------------------------------------------------------------------------
+  // Autocomplete: busca por nome da empresa (ex.: "Sanepar" -> SAPR4)
+  // -------------------------------------------------------------------------
+  var campo = document.getElementById('campo-busca');
+  var lista = document.getElementById('sugestoes-busca');
+  if (!form || !campo || !lista) return;
+
+  var temporizador = null;
+  var ultimaConsulta = '';
+  var itens = [];
+  var indiceAtivo = -1;
+
+  function fecharLista() {
+    lista.hidden = true;
+    lista.innerHTML = '';
+    campo.setAttribute('aria-expanded', 'false');
+    itens = [];
+    indiceAtivo = -1;
+  }
+
+  function escolher(ticker) {
+    campo.value = ticker;
+    fecharLista();
+    if (form.requestSubmit) { form.requestSubmit(); } else { ativarLoading(); form.submit(); }
+  }
+
+  function marcarAtivo(novoIndice) {
+    var elementos = lista.querySelectorAll('li[data-ticker]');
+    if (!elementos.length) return;
+    indiceAtivo = (novoIndice + elementos.length) % elementos.length;
+    elementos.forEach(function (el, i) { el.classList.toggle('ativo', i === indiceAtivo); });
+    elementos[indiceAtivo].scrollIntoView({ block: 'nearest' });
+  }
+
+  function desenhar(resultados) {
+    lista.innerHTML = '';
+    itens = resultados;
+    indiceAtivo = -1;
+    if (!resultados.length) {
+      var vazio = document.createElement('li');
+      vazio.className = 'vazio';
+      vazio.textContent = 'Nenhum ativo da B3 encontrado para esse termo.';
+      lista.appendChild(vazio);
+    }
+    resultados.forEach(function (r) {
+      var li = document.createElement('li');
+      li.setAttribute('role', 'option');
+      li.setAttribute('data-ticker', r.ticker);
+      var forte = document.createElement('strong');
+      forte.textContent = r.ticker;
+      var nome = document.createElement('span');
+      nome.textContent = r.nome;
+      li.appendChild(forte);
+      li.appendChild(nome);
+      li.addEventListener('mousedown', function (ev) { ev.preventDefault(); escolher(r.ticker); });
+      lista.appendChild(li);
+    });
+    lista.hidden = false;
+    campo.setAttribute('aria-expanded', 'true');
+  }
+
+  function consultar(termo) {
+    ultimaConsulta = termo;
+    fetch('/api/buscar-ativos?q=' + encodeURIComponent(termo), { headers: { 'Accept': 'application/json' } })
+      .then(function (resp) { return resp.ok ? resp.json() : { resultados: [] }; })
+      .then(function (json) {
+        if (termo !== ultimaConsulta || campo.value.trim() !== termo) return; // ignora respostas antigas
+        desenhar(json.resultados || []);
+      })
+      .catch(function () { fecharLista(); });
+  }
+
+  campo.addEventListener('input', function () {
+    var termo = campo.value.trim();
+    clearTimeout(temporizador);
+    if (termo.length < 2) { fecharLista(); return; }
+    temporizador = setTimeout(function () { consultar(termo); }, 300);
+  });
+
+  campo.addEventListener('keydown', function (ev) {
+    if (lista.hidden) return;
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); marcarAtivo(indiceAtivo + 1); }
+    else if (ev.key === 'ArrowUp') { ev.preventDefault(); marcarAtivo(indiceAtivo - 1); }
+    else if (ev.key === 'Escape') { fecharLista(); }
+    else if (ev.key === 'Enter' && indiceAtivo >= 0 && itens[indiceAtivo]) {
+      ev.preventDefault();
+      escolher(itens[indiceAtivo].ticker);
+    }
+  });
+
+  campo.addEventListener('blur', function () { setTimeout(fecharLista, 150); });
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

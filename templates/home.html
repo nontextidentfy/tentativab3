@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}Investidor IA | Descomplicando Investimentos na B3 com Valuation Inteligente{% endblock %}
+
+{% block barra_busca_padrao %}{# Oculta a busca do topo para que a Hero Search seja a principal #}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .hero-section {
+    position: relative;
+    padding: 3rem 1.5rem 2.5rem;
+    background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12) 0%, rgba(15, 23, 42, 0) 75%);
+    border: 1px solid var(--borda);
+    border-radius: 20px;
+    margin-bottom: 2.25rem;
+    text-align: center;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  }
+  .hero-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--destaque);
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    margin-bottom: 1.5rem;
+  }
+  .hero-title {
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.03em;
+    margin: 0 auto 1.25rem;
+    max-width: 920px;
+    color: var(--texto);
+  }
+  .hero-subtitle {
+    font-size: clamp(0.95rem, 2vw, 1.12rem);
+    color: var(--suave);
+    max-width: 720px;
+    margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+  .hero-search-box {
+    max-width: 680px;
+    margin: 0 auto 1.5rem;
+    padding: 10px;
+    background: rgba(7, 11, 18, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 14px;
+    box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.12);
+  }
+  .hero-search-box input {
+    font-size: 1.02rem;
+    padding: 14px 18px;
+    background: transparent;
+    border: none;
+  }
+  .hero-search-box input:focus {
+    box-shadow: none;
+  }
+  .hero-search-box button {
+    padding: 13px 24px;
+    font-size: 0.98rem;
+    border-radius: 10px;
+  }
+  .hero-shortcuts {
+    max-width: 800px;
+    margin: 0 auto 1.75rem;
+  }
+  .shortcuts-label {
+    display: block;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--apagado);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .shortcuts-badges {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .shortcut-chip {
+    padding: 6px 12px;
+    background: var(--card-alt);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    color: var(--texto);
+    text-decoration: none;
+    font-size: 0.82rem;
+    font-weight: 700;
+    transition: all 0.15s ease-in-out;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .shortcut-chip:hover {
+    border-color: var(--destaque);
+    color: var(--destaque);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
+  }
+  .hero-ctas {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .pillars-section {
+    margin-bottom: 2.25rem;
+  }
+  .pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .pillar-card {
+    background: var(--card);
+    border: 1px solid var(--borda);
+    border-radius: 14px;
+    padding: 1.6rem;
+    backdrop-filter: blur(10px);
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .pillar-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(56, 189, 248, 0.35);
+    box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.45);
+  }
+  .pillar-icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    display: inline-block;
+  }
+  .pillar-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--texto);
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.01em;
+  }
+  .pillar-desc {
+    font-size: 0.88rem;
+    color: var(--suave);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  .table-panel {
+    background: var(--card);
+    border: 1px solid var(--borda);
+    border-radius: 14px;
+    padding: 1.5rem;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+  }
+  .table-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 1.25rem;
+  }
+  .table-header-flex h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--destaque);
+    font-weight: 700;
+  }
+  .table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid var(--borda);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- HERO SECTION -->
+<section class="hero-section">
+  <div class="hero-pill">
+    <span>✨ Terminal Inteligente de Valuation & Balanços da B3</span>
+  </div>
+
+  <h1 class="hero-title">
+    Chega de planilhas confusas e relatórios cansativos.
+    <span class="gradient-text">Tenha um auditor financeiro inteligente</span> analisando qualquer ação ou FII da B3 para você.
+  </h1>
+
+  <p class="hero-subtitle">
+    Raio-X fundamentalista em segundos, Preço Justo de Graham, Preço Teto de Bazin e fluxo institucional sem ruído de mercado.
+  </p>
+
+  <!-- BUSCA INTEGRADA NA HERO -->
+  <form class="search-box hero-search-box" method="get" action="/analisar" autocomplete="off">
+    <div class="busca-wrap">
+      <input type="text" id="campo-busca" name="ticker"
+             placeholder="Digite o nome da empresa ou o ticker (Ex: Petrobras, Itaú, VALE3, MXRF11, WEGE3)..."
+             required minlength="2" maxlength="60" autocomplete="off" spellcheck="false"
+             role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugestoes-busca">
+      <ul id="sugestoes-busca" class="sugestoes" role="listbox" hidden></ul>
+    </div>
+    <button type="submit" id="btn-submit" class="btn-destaque">
+      ⚡ Extrair Raio-X
+    </button>
+  </form>
+
+  <!-- ATALHOS RÁPIDOS DE DEGUSTAÇÃO -->
+  <div class="hero-shortcuts">
+    <span class="shortcuts-label">⚡ Degustação Imediata: Clique para auditar</span>
+    <div class="shortcuts-badges">
+      {% for t in ["PETR4", "VALE3", "ITUB4", "MXRF11", "WEGE3", "BBAS3", "B3SA3", "TAEE11", "HGLG11", "XPML11"] %}
+        <a class="shortcut-chip" data-carrega href="/analisar?ticker={{ t }}">
+          📈 {{ t }}
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- CTAS DE CONVERSÃO -->
+  <div class="hero-ctas">
+    {% if not usuario %}
+      <a href="/cadastro" class="btn btn-destaque">🚀 Criar Conta Gratuita</a>
+      <a href="/login" class="btn btn-sec">🔑 Entrar na Minha Conta</a>
+    {% else %}
+      <a href="/watchlist" class="btn btn-destaque">⭐ Minha Watchlist</a>
+    {% endif %}
+  </div>
+</section>
+
+<!-- 3 PILARES DE VALOR -->
+<section class="pillars-section">
+  <div class="secao-titulo">
+    <span>💎 Por que usar o Investidor IA</span>
+  </div>
+  <div class="pillars-grid">
+    <div class="pillar-card">
+      <span class="pillar-icon">🔍</span>
+      <h4 class="pillar-title">Auditoria Automática de Balanços</h4>
+      <p class="pillar-desc">
+        Varredura instantânea de margens, ROE, dívida líquida sobre EBITDA e consistência de lucros para proteger seu capital contra armadilhas da Bolsa.
+      </p>
+    </div>
+
+    <div class="pillar-card">
+      <span class="pillar-icon">📐</span>
+      <h4 class="pillar-title">Valuation 1-Clique sem Economês</h4>
+      <p class="pillar-desc">
+        Preço Justo de Graham e Preço Teto de Bazin (6%) calculados automaticamente com margem de segurança visual para balizar seu ponto de entrada.
+      </p>
+    </div>
+
+    <div class="pillar-card">
+      <span class="pillar-icon">📊</span>
+      <h4 class="pillar-title">Monitor de Fluxo & Risco B3</h4>
+      <p class="pillar-desc">
+        Acompanhe a pressão institucional de compra e venda, volume financeiro diário e liquidez real do ativo para tomar decisões com dados concretos.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- TABELA DE ATIVOS CATALOGADOS RECENTEMENTE -->
+<section class="table-panel">
+  <div class="table-header-flex">
+    <h3>🗂️ Base de Ativos Catalogados Recentemente (B3)</h3>
+    <span style="font-size: 0.8rem; color: var(--apagado);">Atualizações automáticas da B3</span>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Ticker</th>
+          <th>Empresa / Fundo</th>
+          <th>Classe</th>
+          <th>Cotação</th>
+          <th>Var. Dia</th>
+          <th>Volume Fin.</th>
+          <th>P/L</th>
+          <th>P/VP</th>
+          <th>DY (12m)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in painel_ativos %}
+        <tr>
+          <td>
+            <a data-carrega href="/analisar?ticker={{ r.ticker }}" style="color:var(--destaque); font-weight:700; text-decoration:none;">
+              {{ r.ticker }}
+            </a>
+          </td>
+          <td>{{ r.nome_empresa }}</td>
+          <td><span class="badge">{{ r.tipo_ativo }}</span></td>
+          <td><strong>R$ {{ r.preco_atual | moeda_br }}</strong></td>
+          <td class="{{ 'pos' if r.variacao_dia_pct >= 0 else 'neg' }}">
+            {{ '+' if r.variacao_dia_pct >= 0 else '' }}{{ r.variacao_dia_pct | moeda_br }}%
+          </td>
+          <td>{{ r.volume_financeiro or 'N/D' }}</td>
+          <td>{{ r.p_l or 'N/D' }}</td>
+          <td>{{ r.p_vp or 'N/D' }}</td>
+          <td class="pos"><strong>{{ r.dividend_yield or 'N/D' }}</strong></td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="9" style="text-align:center; padding:2.5rem; color:var(--apagado);">
+            Nenhum ativo catalogado ainda. Digite um ticker na busca acima ou clique em um dos atalhos rápidos para iniciar!
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

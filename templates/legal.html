@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Termos de Uso e Política de Privacidade | Investidor IA{% endblock %}
+
+{% block content %}
+<div class="painel" style="line-height:1.7;">
+  <h3>📜 1. Termos de Uso e Isenção de Responsabilidade (CVM)</h3>
+  <p style="color:var(--suave); font-size:.92rem;">
+    O <strong>Investidor IA</strong> é uma ferramenta tecnológica de agregação de dados financeiros públicos e automação de leitura contábil.
+    Nenhuma informação, cálculo (como fórmulas matemáticas de Graham ou Bazin) ou texto síntese gerado por inteligência artificial nesta plataforma
+    constitui recomendação, oferta, consultoria ou relatório de análise de valores mobiliários nos termos da Resolução CVM nº 20/2021.
+    Toda decisão de investimento é de responsabilidade exclusiva do usuário.
+  </p>
+
+  <h3 style="margin-top:2rem;">🔒 2. Política de Privacidade e Proteção de Dados (LGPD - Lei nº 13.709/2018)</h3>
+  <ul style="color:var(--suave); font-size:.92rem;">
+    <li><strong>Dados Coletados:</strong> Coletamos apenas nome, endereço de e-mail e preferências de ativos adicionados voluntariamente à sua Watchlist privada.</li>
+    <li><strong>Segurança das Senhas:</strong> Suas senhas jamais são armazenadas em texto puro; utilizamos o algoritmo criptográfico <strong>Argon2id</strong>.</li>
+    <li><strong>Isolamento e Privacidade:</strong> Sua lista de monitoramento e alertas de preço são estritamente privados e visíveis apenas mediante autenticação na sua conta.</li>
+    <li><strong>Direito de Exclusão:</strong> Em cumprimento ao Art. 18 da LGPD, você possui um botão direto no painel da sua conta para excluir permanentemente seu cadastro e todos os registros associados do nosso banco de dados.</li>
+  </ul>
+</div>
+{% endblock %}
