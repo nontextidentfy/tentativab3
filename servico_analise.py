@@ -3,6 +3,7 @@ Serviço central do Investidor IA.
 Extrai fundamentos, documentação contábil e fluxo de volume da B3 (via Yahoo Finance)
 e gera parecer com o Gemini (com fallback algorítmico caso a cota da API esgote).
 """
+from concurrent.futures import ThreadPoolExecutor
 import copy
 import datetime
 import json
@@ -11,6 +12,7 @@ import os
 import re
 import time
 import unicodedata
+import zoneinfo
 import pandas as pd
 import yfinance as yf
 from dotenv import load_dotenv
@@ -31,6 +33,22 @@ client = genai.Client(
 
 TAXA_BAZIN = 0.06
 FATOR_GRAHAM = 22.5
+FUSO_BRASILIA = zoneinfo.ZoneInfo("America/Sao_Paulo")
+
+
+def agora_brasilia() -> datetime.datetime:
+    """Retorna o datetime atual no fuso horário oficial de Brasília (America/Sao_Paulo)."""
+    return datetime.datetime.now(datetime.timezone.utc).astimezone(FUSO_BRASILIA)
+
+
+def em_horario_pregao_b3(dt_brasilia: datetime.datetime | None = None) -> bool:
+    """Retorna True se o instante informado cair em dia útil entre 10h e 17h (horário de Brasília)."""
+    dt = dt_brasilia or agora_brasilia()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=FUSO_BRASILIA)
+    else:
+        dt = dt.astimezone(FUSO_BRASILIA)
+    return dt.weekday() < 5 and (10 <= dt.hour < 17)
 # Aceita tickers padrão B3 (4 caracteres de emissor terminando em letra + 1 ou 2 dígitos: PETR4, B3SA3, TAEE11, G2DI33, AAPL34)
 PADRAO_TICKER = re.compile(r"^[A-Z][A-Z0-9]{2}[A-Z]\d{1,2}$")
 SIMBOLOS_MOEDA = {"BRL": "R$", "USD": "US$", "EUR": "€"}
@@ -375,11 +393,14 @@ def dividendos_ultimos_12m(ativo):
     return float(recentes.sum()), int(len(recentes))
 
 
-def extrair_fluxo_pregoes(ativo, vol_medio_referencia: int = 0) -> list[dict]:
-    """Retorna os últimos pregões com valores numéricos crus e rótulo de variação/volume."""
+def extrair_fluxo_pregoes(ativo, vol_medio_referencia: int = 0, hist_pre_carregado=None) -> list[dict]:
+    """
+    Busca 6 dias de histórico e exibe até 5 pregões mais recentes com valores numéricos crus,
+    garantindo que a variação do pregão mais antigo exibido também seja calculada sobre o fechamento anterior.
+    """
     pregoes = []
     try:
-        hist = ativo.history(period="5d")
+        hist = hist_pre_carregado if hist_pre_carregado is not None else ativo.history(period="6d")
         if hist is not None and not hist.empty:
             fechamento_ant = None
             for data_idx, linha in hist.iterrows():
@@ -416,7 +437,14 @@ def extrair_fluxo_pregoes(ativo, vol_medio_referencia: int = 0) -> list[dict]:
             pregoes.reverse()
     except Exception:
         pass
-    return pregoes
+    return pregoes[:5]
+
+
+def _coletar_historico_seguro(ativo):
+    try:
+        return ativo.history(period="6d")
+    except Exception:
+        return None
 
 
 def extrair_raio_x_b3(ticker_usuario: str) -> dict:
@@ -427,12 +455,20 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     ticker = resolver_ticker(ticker_usuario)
     ativo = yf.Ticker(f"{ticker}.SA")
 
-    try:
-        info = ativo.info or {}
-    except Exception as e:
-        raise ErroAtivo(
-            f"Não foi possível consultar {ticker} na B3 agora ({type(e).__name__})."
-        ) from e
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        fut_info = executor.submit(lambda: ativo.info or {})
+        fut_div = executor.submit(dividendos_ultimos_12m, ativo)
+        fut_hist = executor.submit(_coletar_historico_seguro, ativo)
+
+        try:
+            info = fut_info.result()
+        except Exception as e:
+            raise ErroAtivo(
+                f"Não foi possível consultar {ticker} na B3 agora ({type(e).__name__})."
+            ) from e
+
+        dividendos_12m, qtd_pagamentos = fut_div.result()
+        hist_6d = fut_hist.result()
 
     preco = (
         numero(info.get("currentPrice"))
@@ -462,20 +498,26 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     vol_medio_3m = int(numero(info.get("averageVolume")) or 0)
     vol_financeiro_dia = float(preco * vol_acoes_dia)
 
+    dt_consulta_br = agora_brasilia()
+    em_pregao = em_horario_pregao_b3(dt_consulta_br)
     relacao_volume_media = (vol_acoes_dia / vol_medio_3m * 100) if vol_medio_3m and vol_medio_3m > 0 else None
     if relacao_volume_media is not None:
         if relacao_volume_media >= 120 and variacao_dia_pct > 0:
-            status_fluxo = f"Dia de alta com volume acima da média ({round(relacao_volume_media)}% da média 3m)"
+            suf = "volume até agora, " if em_pregao else ""
+            status_fluxo = f"Dia de alta com volume acima da média ({suf}{round(relacao_volume_media)}% da média 3m)"
         elif relacao_volume_media >= 120 and variacao_dia_pct < 0:
-            status_fluxo = f"Dia de queda com volume acima da média ({round(relacao_volume_media)}% da média 3m)"
+            suf = "volume até agora, " if em_pregao else ""
+            status_fluxo = f"Dia de queda com volume acima da média ({suf}{round(relacao_volume_media)}% da média 3m)"
         elif relacao_volume_media >= 120:
-            status_fluxo = f"Estável com volume acima da média ({round(relacao_volume_media)}% da média 3m)"
+            suf = "volume até agora, " if em_pregao else ""
+            status_fluxo = f"Estável com volume acima da média ({suf}{round(relacao_volume_media)}% da média 3m)"
+        elif em_pregao:
+            status_fluxo = f"Pregão em andamento — volume até agora ({round(relacao_volume_media)}% da média 3m)"
         else:
             status_fluxo = f"Volume Normal ({round(relacao_volume_media)}% da média 3m)"
     else:
-        status_fluxo = "Volume em linha com o histórico"
+        status_fluxo = "Pregão em andamento — volume até agora" if em_pregao else "Volume em linha com o histórico"
 
-    dividendos_12m, qtd_pagamentos = dividendos_ultimos_12m(ativo)
     dy_12m_razao = (dividendos_12m / preco) if preco > 0 else 0.0
     dy_12m_pct = dy_12m_razao * 100.0
 
@@ -521,7 +563,11 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     valor_mercado = numero(info.get("marketCap"))
     enterprise_value = numero(info.get("enterpriseValue"))
 
-    historico_5d = extrair_fluxo_pregoes(ativo, vol_medio_referencia=vol_medio_3m or vol_medio_10d)
+    historico_5d = extrair_fluxo_pregoes(
+        ativo,
+        vol_medio_referencia=vol_medio_3m or vol_medio_10d,
+        hist_pre_carregado=hist_6d,
+    )
 
     pos_52s = 50.0
     if min_52s and max_52s and max_52s > min_52s:
@@ -551,7 +597,7 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
             "Moeda_Cotacao": moeda_cotacao,
             "Simbolo_Moeda": simbolo,
             "Simbolo_Moeda_Balanco": simbolo_balanco,
-            "Data_Consulta": datetime.date.today().strftime("%d/%m/%Y"),
+            "Data_Consulta": dt_consulta_br.strftime("%d/%m/%Y"),
             "Resumo_Negocio": resumo[:1500],
         },
         "Cotacao_e_Mercado": {

@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+import threading
 from typing import Optional
 from urllib.parse import quote_plus
 import markdown as md
@@ -62,9 +63,21 @@ templates.env.globals["DESCRICAO_TIPO"] = svc.DESCRICAO_TIPO
 log = logging.getLogger("investidor_ia")
 
 HORAS_CACHE = 24
-FUSO_BRASILIA = datetime.timedelta(hours=-3)
+COOLDOWN_ATUALIZACAO_MINUTOS = 15
+_LOCKS_TICKER_GUARD = threading.Lock()
+_LOCKS_POR_TICKER: dict[str, threading.Lock] = {}
+
 # Limite de consultas de análise por IP (protege a cota do Gemini). Pode ser ajustado no .env.
 LIMITE_ANALISE = (os.getenv("LIMITE_ANALISE") or "5/minute;10/day").strip()
+
+
+def _obter_lock_ticker(ticker: str) -> threading.Lock:
+    with _LOCKS_TICKER_GUARD:
+        lock = _LOCKS_POR_TICKER.get(ticker)
+        if lock is None:
+            lock = threading.Lock()
+            _LOCKS_POR_TICKER[ticker] = lock
+        return lock
 
 
 def renderizar_markdown(texto: str) -> str:
@@ -101,7 +114,9 @@ def filtro_inteiro_br(valor) -> str:
 def filtro_horario_br(data_utc) -> str:
     if not data_utc:
         return "N/D"
-    return (data_utc + FUSO_BRASILIA).strftime("%d/%m/%Y às %H:%M")
+    if data_utc.tzinfo is None:
+        data_utc = data_utc.replace(tzinfo=datetime.timezone.utc)
+    return data_utc.astimezone(svc.FUSO_BRASILIA).strftime("%d/%m/%Y às %H:%M")
 
 
 templates.env.filters["moeda_br"] = filtro_moeda_br
@@ -393,6 +408,77 @@ def api_buscar_ativos(request: Request, q: str = Query("", max_length=60)):
     return JSONResponse({"resultados": svc.buscar_ativos(q, limite=8)})
 
 
+def _buscar_cache_ativo(db: Session, ticker_ok: str, limite_minimo: datetime.datetime):
+    return (
+        db.query(Ativo, Cotacao)
+        .join(Cotacao, Ativo.ultima_cotacao_id == Cotacao.id)
+        .filter(
+            Ativo.ticker == ticker_ok,
+            Cotacao.coletado_em >= limite_minimo,
+        )
+        .first()
+    )
+
+
+def _montar_resposta_cache(
+    request: Request,
+    db: Session,
+    ticker_ok: str,
+    cotacao_cache: Cotacao,
+    usuario: Optional[Usuario],
+    origem: str,
+    success_msg: Optional[str] = None,
+):
+    dados_cache = (
+        cotacao_cache.dados
+        if isinstance(cotacao_cache.dados, dict)
+        else json.loads(cotacao_cache.dados)
+    )
+    analise_cache = (
+        db.query(AnaliseIA)
+        .filter(AnaliseIA.cotacao_id == cotacao_cache.id)
+        .order_by(AnaliseIA.criado_em.desc())
+        .first()
+    )
+    if analise_cache:
+        relatorio_md = analise_cache.relatorio_md
+        motor_cache = analise_cache.modelo
+    else:
+        relatorio_md, motor_cache, veio_ia_agora = svc.gerar_relatorio_ia(dados_cache)
+        if veio_ia_agora:
+            try:
+                db.add(
+                    AnaliseIA(
+                        ticker=ticker_ok,
+                        cotacao_id=cotacao_cache.id,
+                        modelo=motor_cache,
+                        veio_da_ia=True,
+                        relatorio_md=relatorio_md,
+                        criado_em=agora_utc(),
+                    )
+                )
+                db.commit()
+            except Exception:
+                db.rollback()
+
+    relatorio_html = renderizar_markdown(relatorio_md)
+    painel_ativos = obter_recentes_seguro(db)
+    return templates.TemplateResponse(
+        request=request,
+        name="resultado.html",
+        context={
+            "usuario": usuario,
+            "dados": dados_cache,
+            "relatorio_html": relatorio_html,
+            "origem": origem,
+            "motor": motor_cache,
+            "data_dados": cotacao_cache.coletado_em,
+            "painel_ativos": painel_ativos,
+            "success_msg": success_msg,
+        },
+    )
+
+
 @app.get("/analisar", response_class=HTMLResponse)
 @limiter.limit(LIMITE_ANALISE)
 def analisar_ativo(
@@ -412,108 +498,102 @@ def analisar_ativo(
             context={"error_msg": str(e), "painel_ativos": painel_ativos, "usuario": usuario},
         )
 
-    limite = agora_utc() - datetime.timedelta(hours=HORAS_CACHE)
+    agora = agora_utc()
+    limite_24h = agora - datetime.timedelta(hours=HORAS_CACHE)
+    limite_cooldown = agora - datetime.timedelta(minutes=COOLDOWN_ATUALIZACAO_MINUTOS)
 
     if not atualizar:
-        par_cache = (
-            db.query(Ativo, Cotacao)
-            .join(Cotacao, Ativo.ultima_cotacao_id == Cotacao.id)
-            .filter(
-                Ativo.ticker == ticker_ok,
-                Cotacao.coletado_em >= limite,
-            )
-            .first()
-        )
-
+        par_cache = _buscar_cache_ativo(db, ticker_ok, limite_24h)
         if par_cache:
-            _, cotacao_cache = par_cache
-            dados_cache = (
-                cotacao_cache.dados
-                if isinstance(cotacao_cache.dados, dict)
-                else json.loads(cotacao_cache.dados)
+            return _montar_resposta_cache(
+                request=request,
+                db=db,
+                ticker_ok=ticker_ok,
+                cotacao_cache=par_cache[1],
+                usuario=usuario,
+                origem="Banco de Dados (Cache 24h)",
             )
-            analise_cache = (
-                db.query(AnaliseIA)
-                .filter(AnaliseIA.cotacao_id == cotacao_cache.id)
-                .order_by(AnaliseIA.criado_em.desc())
-                .first()
+    else:
+        par_recente = _buscar_cache_ativo(db, ticker_ok, limite_cooldown)
+        if par_recente:
+            aviso = (
+                f"Os dados de {ticker_ok} já foram atualizados há menos de {COOLDOWN_ATUALIZACAO_MINUTOS} minutos. "
+                "Exibindo a coleta mais recente em cache."
             )
-            if analise_cache:
-                relatorio_md = analise_cache.relatorio_md
-                motor_cache = analise_cache.modelo
-            else:
-                relatorio_md, motor_cache, veio_ia_agora = svc.gerar_relatorio_ia(dados_cache)
-                if veio_ia_agora:
-                    try:
-                        db.add(
-                            AnaliseIA(
-                                ticker=ticker_ok,
-                                cotacao_id=cotacao_cache.id,
-                                modelo=motor_cache,
-                                veio_da_ia=True,
-                                relatorio_md=relatorio_md,
-                                criado_em=agora_utc(),
-                            )
-                        )
-                        db.commit()
-                    except Exception:
-                        db.rollback()
+            return _montar_resposta_cache(
+                request=request,
+                db=db,
+                ticker_ok=ticker_ok,
+                cotacao_cache=par_recente[1],
+                usuario=usuario,
+                origem=f"Banco de Dados (Cooldown {COOLDOWN_ATUALIZACAO_MINUTOS}m)",
+                success_msg=aviso,
+            )
 
-            relatorio_html = renderizar_markdown(relatorio_md)
+    with _obter_lock_ticker(ticker_ok):
+        # Revalida dentro do lock para evitar duas chamadas simultâneas ao Gemini/yfinance para o mesmo ticker
+        db.expire_all()
+        par_concorrente = _buscar_cache_ativo(
+            db,
+            ticker_ok,
+            agora_utc() - datetime.timedelta(minutes=COOLDOWN_ATUALIZACAO_MINUTOS),
+        )
+        if par_concorrente:
+            aviso_conc = (
+                f"Os dados de {ticker_ok} já foram atualizados há menos de {COOLDOWN_ATUALIZACAO_MINUTOS} minutos. "
+                "Exibindo a coleta mais recente em cache."
+                if atualizar
+                else None
+            )
+            return _montar_resposta_cache(
+                request=request,
+                db=db,
+                ticker_ok=ticker_ok,
+                cotacao_cache=par_concorrente[1],
+                usuario=usuario,
+                origem="Banco de Dados (Cache 24h)",
+                success_msg=aviso_conc,
+            )
+
+        try:
+            dados = svc.extrair_raio_x_b3(ticker_ok)
+        except svc.ErroAtivo as e:
             painel_ativos = obter_recentes_seguro(db)
             return templates.TemplateResponse(
                 request=request,
-                name="resultado.html",
+                name="home.html",
+                context={"error_msg": str(e), "painel_ativos": painel_ativos, "usuario": usuario},
+            )
+        except Exception:
+            log.exception("Erro ao extrair %s", ticker_ok)
+            painel_ativos = obter_recentes_seguro(db)
+            return templates.TemplateResponse(
+                request=request,
+                name="home.html",
                 context={
-                    "usuario": usuario,
-                    "dados": dados_cache,
-                    "relatorio_html": relatorio_html,
-                    "origem": "Banco de Dados (Cache 24h)",
-                    "motor": motor_cache,
-                    "data_dados": cotacao_cache.coletado_em,
+                    "error_msg": f"Não foi possível obter os dados de {ticker_ok} na B3 no momento.",
                     "painel_ativos": painel_ativos,
+                    "usuario": usuario,
                 },
             )
 
-    try:
-        dados = svc.extrair_raio_x_b3(ticker_ok)
-    except svc.ErroAtivo as e:
-        painel_ativos = obter_recentes_seguro(db)
-        return templates.TemplateResponse(
-            request=request,
-            name="home.html",
-            context={"error_msg": str(e), "painel_ativos": painel_ativos, "usuario": usuario},
-        )
-    except Exception:
-        log.exception("Erro ao extrair %s", ticker_ok)
-        painel_ativos = obter_recentes_seguro(db)
-        return templates.TemplateResponse(
-            request=request,
-            name="home.html",
-            context={
-                "error_msg": f"Não foi possível obter os dados de {ticker_ok} na B3 no momento.",
-                "painel_ativos": painel_ativos,
-                "usuario": usuario,
-            },
-        )
+        relatorio_md, motor_usado, veio_da_ia = svc.gerar_relatorio_ia(dados)
+        relatorio_html = renderizar_markdown(relatorio_md)
+        data_atual = agora_utc()
 
-    relatorio_md, motor_usado, veio_da_ia = svc.gerar_relatorio_ia(dados)
-    relatorio_html = renderizar_markdown(relatorio_md)
-    data_atual = agora_utc()
-
-    try:
-        _salvar_coleta_no_banco(
-            db=db,
-            ticker_ok=ticker_ok,
-            dados=dados,
-            relatorio_md=relatorio_md,
-            motor_usado=motor_usado,
-            veio_da_ia=veio_da_ia,
-            data_atual=data_atual,
-        )
-    except Exception:
-        db.rollback()
-        log.exception("Erro ao gravar coleta no banco de dados")
+        try:
+            _salvar_coleta_no_banco(
+                db=db,
+                ticker_ok=ticker_ok,
+                dados=dados,
+                relatorio_md=relatorio_md,
+                motor_usado=motor_usado,
+                veio_da_ia=veio_da_ia,
+                data_atual=data_atual,
+            )
+        except Exception:
+            db.rollback()
+            log.exception("Erro ao gravar coleta no banco de dados")
 
     painel_ativos = obter_recentes_seguro(db)
     return templates.TemplateResponse(
