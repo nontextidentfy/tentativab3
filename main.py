@@ -597,8 +597,13 @@ def processar_cadastro(
                     context={"modo": "cadastro", "error_msg": "Este e-mail já está cadastrado. Faça login ou recupere sua senha."},
                 )
             auth.disparar_confirmacao_email(usuario_existente)
+            msg_atualizado = (
+                "Cadastro atualizado com sucesso! Enviamos um link para o seu e-mail."
+                if auth.email_configurado()
+                else "Cadastro atualizado com sucesso! Confira o terminal para confirmar o e-mail."
+            )
             resp = RedirectResponse(
-                url="/watchlist?msg=Cadastro+atualizado+com+sucesso!+Confira+o+terminal+para+confirmar+o+e-mail.",
+                url=f"/watchlist?msg={quote_plus(msg_atualizado)}",
                 status_code=303,
             )
             auth.definir_cookie_sessao(resp, usuario_existente.id)
@@ -632,7 +637,12 @@ def processar_cadastro(
 
     auth.disparar_confirmacao_email(novo_usuario)
 
-    resp = RedirectResponse(url="/watchlist?msg=Conta+criada!+Verifique+seu+e-mail+(ou+o+terminal+de+teste)+para+confirmar+o+cadastro.", status_code=303)
+    msg_criada = (
+        "Conta criada! Enviamos um link para o seu e-mail para confirmar o cadastro."
+        if auth.email_configurado()
+        else "Conta criada! Verifique seu e-mail (ou confira o terminal de teste) para confirmar o cadastro."
+    )
+    resp = RedirectResponse(url=f"/watchlist?msg={quote_plus(msg_criada)}", status_code=303)
     auth.definir_cookie_sessao(resp, novo_usuario.id)
     return resp
 
@@ -712,12 +722,17 @@ def processar_esqueci_senha(
     u = db.query(Usuario).filter(Usuario.email == email.strip().lower()).first()
     if u:
         auth.disparar_recuperacao_senha(u)
+    msg_esqueci = (
+        "Se o e-mail estiver cadastrado, enviamos um link para o seu e-mail."
+        if auth.email_configurado()
+        else "Se o e-mail estiver cadastrado, enviamos o link de recuperação (confira o terminal em modo local)."
+    )
     return templates.TemplateResponse(
         request=request,
         name="auth.html",
         context={
             "modo": "login",
-            "success_msg": "Se o e-mail estiver cadastrado, enviamos o link de recuperação (confira também o console em modo local).",
+            "success_msg": msg_esqueci,
         },
     )
 
@@ -891,7 +906,12 @@ def reenviar_confirmacao(
     if not usuario:
         return RedirectResponse(url="/login", status_code=303)
     auth.disparar_confirmacao_email(usuario)
-    return RedirectResponse(url="/watchlist?msg=Link+de+confirmacao+reenviado!(Confira+o+terminal+ou+e-mail).", status_code=303)
+    msg_reenvio = (
+        "Enviamos um link para o seu e-mail."
+        if auth.email_configurado()
+        else "Link de confirmação reenviado! Confira o terminal ou seu e-mail."
+    )
+    return RedirectResponse(url=f"/watchlist?msg={quote_plus(msg_reenvio)}", status_code=303)
 
 
 @app.post("/conta/excluir")

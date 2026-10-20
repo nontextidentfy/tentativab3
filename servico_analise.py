@@ -15,6 +15,7 @@ import pandas as pd
 import yfinance as yf
 from dotenv import load_dotenv
 from google import genai
+from google.genai import errors as genai_errors
 
 PASTA_PROJETO = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(PASTA_PROJETO, ".env"))
@@ -30,8 +31,8 @@ client = genai.Client(
 
 TAXA_BAZIN = 0.06
 FATOR_GRAHAM = 22.5
-# Aceita tickers padrão B3 (ex: PETR4, B3SA3, TAEE11, G2DI33, AAPL34, BOVA11)
-PADRAO_TICKER = re.compile(r"^[A-Z0-9]{4}\d{1,2}$")
+# Aceita tickers padrão B3 (4 caracteres de emissor terminando em letra + 1 ou 2 dígitos: PETR4, B3SA3, TAEE11, G2DI33, AAPL34)
+PADRAO_TICKER = re.compile(r"^[A-Z][A-Z0-9]{2}[A-Z]\d{1,2}$")
 SIMBOLOS_MOEDA = {"BRL": "R$", "USD": "US$", "EUR": "€"}
 DESCRICAO_TIPO = {
     "Acao": "Ação Corporativa",
@@ -230,12 +231,30 @@ def _limpar_nome_yahoo(nome: str) -> str:
     return re.sub(r"\s+", " ", (nome or "").strip())
 
 
-def buscar_ativos(termo: str, limite: int = 8) -> list[dict]:
+def _classificar_prioridade_busca(chave: str, ticker: str, nome: str) -> int | None:
     """
-    Procura ativos da B3 pelo nome da empresa ou parte do ticker.
-    Retorna uma lista de {"ticker": "SAPR4", "nome": "Sanepar PN"}.
-    Nunca levanta exceção: em caso de falha de rede, retorna os resultados locais.
+    Classifica o resultado em:
+    1 = ticker exato
+    2 = ticker começa com o termo
+    3 = alguma palavra do nome começa com o termo
+    4 = ticker ou nome contém o termo
+    None = não corresponde
     """
+    tk_low = (ticker or "").lower()
+    nome_norm = _sem_acentos(nome)
+    if tk_low == chave:
+        return 1
+    if tk_low.startswith(chave):
+        return 2
+    palavras = re.findall(r"[a-z0-9]+", nome_norm)
+    if nome_norm.startswith(chave) or any(p.startswith(chave) for p in palavras):
+        return 3
+    if chave in tk_low or chave in nome_norm:
+        return 4
+    return None
+
+
+def _buscar_candidatos_ordenados(termo: str, limite: int = 8) -> list[dict]:
     termo_limpo = re.sub(r"\s+", " ", (termo or "").strip())
     if len(termo_limpo) < 2:
         return []
@@ -246,17 +265,20 @@ def buscar_ativos(termo: str, limite: int = 8) -> list[dict]:
     if em_cache and agora - em_cache[0] < _CACHE_BUSCA_TTL_SEGUNDOS:
         return em_cache[1][:limite]
 
-    resultados: list[dict] = []
+    candidatos_com_ordem: list[tuple[int, int, dict]] = []
     vistos: set[str] = set()
+    ordem = 0
 
-    # 1. Busca instantânea no catálogo local da B3
+    # 1. Busca no catálogo local da B3
     for tk, nome in CATALOGO_B3:
-        if chave in tk.lower() or chave in _sem_acentos(nome):
+        grupo = _classificar_prioridade_busca(chave, tk, nome)
+        if grupo is not None:
             vistos.add(tk)
-            resultados.append({"ticker": tk, "nome": nome})
+            candidatos_com_ordem.append((grupo, ordem, {"ticker": tk, "nome": nome, "_grupo": grupo}))
+            ordem += 1
 
     # 2. Complementa com o Yahoo Finance se ainda houver espaço
-    if len(resultados) < limite:
+    if len(candidatos_com_ordem) < limite:
         try:
             cotacoes = yf.Search(termo_limpo, max_results=20, news_count=0).quotes or []
         except Exception:
@@ -271,19 +293,35 @@ def buscar_ativos(termo: str, limite: int = 8) -> list[dict]:
                 continue
             vistos.add(ticker)
             nome = _limpar_nome_yahoo(item.get("longname") or item.get("shortname") or ticker)
-            resultados.append({"ticker": ticker, "nome": nome})
+            grupo = _classificar_prioridade_busca(chave, ticker, nome) or 4
+            candidatos_com_ordem.append((grupo, ordem, {"ticker": ticker, "nome": nome, "_grupo": grupo}))
+            ordem += 1
+
+    candidatos_com_ordem.sort(key=lambda item: (item[0], item[1]))
+    ordenados = [item[2] for item in candidatos_com_ordem]
 
     if len(_CACHE_BUSCA) >= _CACHE_BUSCA_MAX_ITENS:
         _CACHE_BUSCA.clear()
-    if resultados:
-        _CACHE_BUSCA[chave] = (agora, resultados)
-    return resultados[:limite]
+    if ordenados:
+        _CACHE_BUSCA[chave] = (agora, ordenados)
+    return ordenados[:limite]
+
+
+def buscar_ativos(termo: str, limite: int = 8) -> list[dict]:
+    """
+    Procura ativos da B3 pelo nome da empresa ou parte do ticker, ordenando por:
+    (1) ticker exato, (2) prefixo de ticker, (3) prefixo de palavra no nome, (4) contém.
+    Retorna uma lista de {"ticker": "SAPR4", "nome": "Sanepar PN"}.
+    """
+    candidatos = _buscar_candidatos_ordenados(termo, limite=limite)
+    return [{"ticker": c["ticker"], "nome": c["nome"]} for c in candidatos]
 
 
 def resolver_ticker(entrada_usuario: str) -> str:
     """
-    Aceita tanto o ticker (PETR4, sapr4, SAPR4F) quanto o nome da empresa (Sanepar, Itaú, Magazine Luiza).
-    Retorna sempre o ticker padrão da B3 ou levanta ErroAtivo com uma mensagem amigável.
+    Aceita tanto o ticker (PETR4, sapr4, SAPR4F) quanto o nome da empresa (Sanepar, Itaú, WEG).
+    Escolhe automaticamente apenas quando o melhor resultado está nos grupos 1 ou 2,
+    ou quando há um único resultado; caso contrário, levanta ErroAtivo com a lista de candidatos.
     """
     entrada = (entrada_usuario or "").strip()
     try:
@@ -291,14 +329,21 @@ def resolver_ticker(entrada_usuario: str) -> str:
     except ErroAtivo:
         pass
 
-    encontrados = buscar_ativos(entrada, limite=1)
-    if encontrados:
-        return encontrados[0]["ticker"]
+    candidatos = _buscar_candidatos_ordenados(entrada, limite=8)
+    if not candidatos:
+        raise ErroAtivo(
+            f"Não encontramos nenhum ativo da B3 para '{entrada_usuario}'. "
+            "Tente o nome da empresa (ex.: Sanepar, Petrobras, Itaú) ou o ticker (ex.: SAPR4, PETR4, ITUB4)."
+        )
 
-    raise ErroAtivo(
-        f"Não encontramos nenhum ativo da B3 para '{entrada_usuario}'. "
-        "Tente o nome da empresa (ex.: Sanepar, Petrobras, Itaú) ou o ticker (ex.: SAPR4, PETR4, ITUB4)."
-    )
+    melhor = candidatos[0]
+    if len(candidatos) == 1 or melhor.get("_grupo") in (1, 2):
+        return melhor["ticker"]
+
+    mesmo_grupo = [c for c in candidatos if c.get("_grupo") == melhor.get("_grupo")]
+    lista_exibicao = mesmo_grupo if len(mesmo_grupo) > 1 else candidatos
+    opcoes_txt = ", ".join(f"{c['ticker']} {c['nome']}" for c in lista_exibicao)
+    raise ErroAtivo(f"Você quis dizer: {opcoes_txt}")
 
 
 def classificar_ativo(ticker: str, info: dict) -> str:
@@ -330,8 +375,8 @@ def dividendos_ultimos_12m(ativo):
     return float(recentes.sum()), int(len(recentes))
 
 
-def extrair_fluxo_pregoes(ativo) -> list[dict]:
-    """Retorna os últimos pregões com valores numéricos crus."""
+def extrair_fluxo_pregoes(ativo, vol_medio_referencia: int = 0) -> list[dict]:
+    """Retorna os últimos pregões com valores numéricos crus e rótulo de variação/volume."""
     pregoes = []
     try:
         hist = ativo.history(period="5d")
@@ -350,11 +395,16 @@ def extrair_fluxo_pregoes(ativo) -> list[dict]:
                     var_dia = 0.0
                 fechamento_ant = fech
 
-                direcao = (
-                    "Entrada Compradora"
-                    if var_dia > 0.15
-                    else ("Saída Vendedora" if var_dia < -0.15 else "Neutro")
-                )
+                if var_dia > 0.15:
+                    direcao = "Dia de alta"
+                elif var_dia < -0.15:
+                    direcao = "Dia de queda"
+                else:
+                    direcao = "Estável"
+
+                if vol_medio_referencia and vol_medio_referencia > 0 and vol > vol_medio_referencia:
+                    direcao = f"{direcao} com volume acima da média"
+
                 pregoes.append({
                     "data": data_idx.strftime("%d/%m/%Y"),
                     "fechamento": round(fech, 4),
@@ -415,9 +465,11 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     relacao_volume_media = (vol_acoes_dia / vol_medio_3m * 100) if vol_medio_3m and vol_medio_3m > 0 else None
     if relacao_volume_media is not None:
         if relacao_volume_media >= 120 and variacao_dia_pct > 0:
-            status_fluxo = f"Forte Entrada de Volume ({round(relacao_volume_media)}% da média)"
+            status_fluxo = f"Dia de alta com volume acima da média ({round(relacao_volume_media)}% da média 3m)"
         elif relacao_volume_media >= 120 and variacao_dia_pct < 0:
-            status_fluxo = f"Forte Pressão Vendedora ({round(relacao_volume_media)}% da média)"
+            status_fluxo = f"Dia de queda com volume acima da média ({round(relacao_volume_media)}% da média 3m)"
+        elif relacao_volume_media >= 120:
+            status_fluxo = f"Estável com volume acima da média ({round(relacao_volume_media)}% da média 3m)"
         else:
             status_fluxo = f"Volume Normal ({round(relacao_volume_media)}% da média 3m)"
     else:
@@ -467,7 +519,7 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     valor_mercado = numero(info.get("marketCap"))
     enterprise_value = numero(info.get("enterpriseValue"))
 
-    historico_5d = extrair_fluxo_pregoes(ativo)
+    historico_5d = extrair_fluxo_pregoes(ativo, vol_medio_referencia=vol_medio_3m or vol_medio_10d)
 
     pos_52s = 50.0
     if min_52s and max_52s and max_52s > min_52s:
@@ -819,11 +871,20 @@ ESTRUTURA OBRIGATÓRIA:
         if not texto:
             return gerar_resumo_tecnico_local(dados, "Resposta vazia da API"), "Motor Algorítmico Local", False
         return texto, MODELO_GEMINI, True
-    except Exception as e:
-        msg_erro = str(e)
-        if "429" in msg_erro or "quota" in msg_erro.lower():
+    except genai_errors.APIError as e:
+        codigo_http = getattr(e, "code", None) or getattr(e, "status_code", None)
+        if codigo_http == 429:
             erro_curto = "Limite de cota da API atingido"
-        elif "404" in msg_erro or "not found" in msg_erro.lower():
+        elif codigo_http == 404:
+            erro_curto = f"Modelo '{MODELO_GEMINI}' inválido no .env"
+        else:
+            erro_curto = f"APIError({codigo_http})" if codigo_http else type(e).__name__
+        return gerar_resumo_tecnico_local(dados, erro_curto), f"Motor Algorítmico ({erro_curto})", False
+    except Exception as e:
+        codigo_http = getattr(e, "code", None) or getattr(e, "status_code", None)
+        if codigo_http == 429:
+            erro_curto = "Limite de cota da API atingido"
+        elif codigo_http == 404:
             erro_curto = f"Modelo '{MODELO_GEMINI}' inválido no .env"
         else:
             erro_curto = type(e).__name__

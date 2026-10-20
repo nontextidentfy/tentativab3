@@ -16,7 +16,8 @@ from sqlalchemy.orm import Session
 
 from banco import Usuario, obter_sessao_banco
 
-load_dotenv()
+PASTA_PROJETO = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(PASTA_PROJETO, ".env"))
 log = logging.getLogger("investidor_ia.auth")
 
 SECRET_KEY = os.getenv("SECRET_KEY") or "chave-padrao-desenvolvimento-trocar-em-producao-2026"
@@ -30,6 +31,15 @@ TEMPO_SESSAO_SEGUNDOS = 60 * 60 * 24 * 7  # 7 dias
 
 ph = PasswordHasher()
 serializer = URLSafeTimedSerializer(SECRET_KEY)
+
+
+def email_configurado() -> bool:
+    """Retorna True somente quando SMTP_HOST, SMTP_USER e SMTP_PASS estão preenchidos no ambiente."""
+    return bool(
+        (os.getenv("SMTP_HOST") or "").strip()
+        and (os.getenv("SMTP_USER") or "").strip()
+        and (os.getenv("SMTP_PASS") or "").strip()
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -112,27 +122,27 @@ def enviar_email_transacional(destinatario: str, assunto: str, corpo_texto: str)
     smtp_pass = os.getenv("SMTP_PASS")
     remetente = os.getenv("SMTP_FROM") or smtp_user or "nao-responda@investidoria.com.br"
 
-    # Sempre exibe no console durante testes para facilitar a verificação imediata
-    _imprimir_seguro("\n" + "=" * 75)
-    _imprimir_seguro(f"📧 [E-MAIL TRANSACIONAL] Para: {destinatario} | Assunto: {assunto}")
-    _imprimir_seguro("-" * 75)
-    _imprimir_seguro(corpo_texto)
-    _imprimir_seguro("=" * 75 + "\n")
+    if not email_configurado():
+        _imprimir_seguro("\n" + "=" * 75)
+        _imprimir_seguro(f"📧 [E-MAIL TRANSACIONAL] Para: {destinatario} | Assunto: {assunto}")
+        _imprimir_seguro("-" * 75)
+        _imprimir_seguro(corpo_texto)
+        _imprimir_seguro("=" * 75 + "\n")
+        return
 
-    if smtp_host and smtp_user and smtp_pass:
-        try:
-            msg = EmailMessage()
-            msg["Subject"] = assunto
-            msg["From"] = remetente
-            msg["To"] = destinatario
-            msg.set_content(corpo_texto)
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = assunto
+        msg["From"] = remetente
+        msg["To"] = destinatario
+        msg.set_content(corpo_texto)
 
-            with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_pass)
-                server.send_message(msg)
-        except Exception:
-            log.exception("Falha ao enviar e-mail via SMTP para %s", destinatario)
+        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+            server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+    except Exception:
+        log.exception("Falha ao enviar e-mail via SMTP para %s", destinatario)
 
 
 def disparar_confirmacao_email(usuario: Usuario) -> str:
