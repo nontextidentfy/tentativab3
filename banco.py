@@ -1,13 +1,14 @@
 """
-Gerenciamento de Banco de Dados de Produção (PostgreSQL).
+Gerenciamento de Banco de Dados de Produção (PostgreSQL) e Testes (SQLite).
 Modelos: RegistroAnalise (Cache e Fluxo), Usuario (Contas/Argon2) e MonitoramentoUsuario (Watchlist Privada).
 """
 import datetime
 import logging
 import os
 from dotenv import load_dotenv
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, create_engine, text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, create_engine, event, text
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 PASTA_PROJETO = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(PASTA_PROJETO, ".env"))
@@ -18,8 +19,7 @@ log = logging.getLogger("investidor_ia.banco")
 def normalizar_url_banco(url: str) -> str:
     """
     Padroniza a URL do PostgreSQL (Neon, Render, Heroku etc.) para o driver psycopg 3,
-    que é o driver declarado no requirements.txt.
-    Aceita 'postgres://', 'postgresql://' e 'postgresql+psycopg://'.
+    ou preserva URLs SQLite para execução de testes.
     """
     url = (url or "").strip().strip('"').strip("'")
     if url.startswith("postgres://"):
@@ -29,15 +29,39 @@ def normalizar_url_banco(url: str) -> str:
     return url
 
 
-URL_BANCO = normalizar_url_banco(os.getenv("DATABASE_URL"))
+def criar_engine_banco(url_normalizada: str):
+    """Cria o engine SQLAlchemy adequado para PostgreSQL (produção) ou SQLite (testes)."""
+    if url_normalizada.startswith("postgresql+psycopg://"):
+        return create_engine(
+            url_normalizada,
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=10,
+            pool_recycle=300,
+        )
+    if url_normalizada.startswith("sqlite"):
+        eng = create_engine(
+            url_normalizada,
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
 
-if not URL_BANCO.startswith("postgresql+psycopg://"):
+        @event.listens_for(eng, "connect")
+        def _ativar_fk_sqlite(dbapi_connection, _connection_record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA foreign_keys=ON")
+            cursor.close()
+
+        return eng
+
     raise ValueError(
         "A DATABASE_URL do PostgreSQL não foi encontrada ou é inválida no .env. "
         "Use a connection string do Neon (começa com 'postgresql://')."
     )
 
-engine = create_engine(URL_BANCO, pool_pre_ping=True, pool_size=5, max_overflow=10, pool_recycle=300)
+
+URL_BANCO = normalizar_url_banco(os.getenv("DATABASE_URL"))
+engine = criar_engine_banco(URL_BANCO)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -114,7 +138,11 @@ def sincronizar_sequencias_postgres():
     """
     Sincroniza o contador de IDs (SERIAL/SEQUENCE) do PostgreSQL com o maior ID existente
     nas tabelas, evitando o erro UniqueViolation (usuarios_pkey).
+    Não faz nada quando o dialeto não é PostgreSQL.
     """
+    if engine.dialect.name != "postgresql":
+        return
+
     tabelas = ["usuarios", "analises_ativos", "monitoramento_usuarios"]
     for tabela in tabelas:
         try:

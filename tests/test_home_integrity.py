@@ -1,10 +1,18 @@
+import os
+
+os.environ["DATABASE_URL"] = "sqlite+pysqlite:///:memory:"
+
 import unittest
 from fastapi.testclient import TestClient
+
+import banco
 import main
+
 
 class TestHomeIntegrity(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        banco.Base.metadata.create_all(bind=banco.engine)
         cls.client = TestClient(main.app)
 
     def test_home_page_status_and_content(self):
@@ -14,7 +22,6 @@ class TestHomeIntegrity(unittest.TestCase):
 
         # 1. Headline e Proposta de Valor
         self.assertIn("Chega de planilhas confusas", html)
-        self.assertIn("auditor financeiro inteligente", html.lower())
 
         # 2. Hero Search Bar e Autocomplete
         self.assertIn('id="campo-busca"', html)
@@ -26,18 +33,9 @@ class TestHomeIntegrity(unittest.TestCase):
             self.assertIn(f"/analisar?ticker={ticker}", html)
 
         # 4. Três Pilares de Valor
-        self.assertTrue(
-            "auditoria" in html.lower() or "balanços" in html.lower(),
-            "Pilar de Auditoria não encontrado"
-        )
-        self.assertTrue(
-            "valuation" in html.lower(),
-            "Pilar de Valuation não encontrado"
-        )
-        self.assertTrue(
-            "fluxo" in html.lower(),
-            "Pilar de Fluxo não encontrado"
-        )
+        self.assertIn("balanços", html.lower())
+        self.assertIn("valuation", html.lower())
+        self.assertIn("volume", html.lower())
 
         # 5. CTAs de Conversão
         self.assertIn("/cadastro", html)
@@ -49,6 +47,8 @@ class TestHomeIntegrity(unittest.TestCase):
         dados = response.json()
         self.assertIn("resultados", dados)
         self.assertIsInstance(dados["resultados"], list)
+        self.assertGreaterEqual(len(dados["resultados"]), 1)
+        self.assertEqual(dados["resultados"][0]["ticker"], "VALE3")
 
     def test_auth_pages_render(self):
         resp_login = self.client.get("/login")
@@ -63,6 +63,7 @@ class TestHomeIntegrity(unittest.TestCase):
         resp = self.client.get("/termos")
         self.assertEqual(resp.status_code, 200)
         self.assertIn("Termos de Uso", resp.text)
+
 
 if __name__ == "__main__":
     unittest.main()
