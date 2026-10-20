@@ -171,29 +171,47 @@ def test_1_5_cadastro_duplicado_simultaneo_integrity_error(client, monkeypatch):
         main.app.dependency_overrides.clear()
 
 
-def test_1_6_variacao_nula_na_home(client, sessao_db):
-    reg = banco.RegistroAnalise(
+def test_1_6_variacao_nula_na_home(client, sessao_db, monkeypatch):
+    ativo = banco.Ativo(ticker="PETR4", nome="Petrobras", tipo="Acao", moeda_cotacao="BRL")
+    sessao_db.add(ativo)
+    sessao_db.flush()
+
+    cot = banco.Cotacao(
         ticker="PETR4",
-        nome_empresa="Petrobras",
-        tipo_ativo="Ação Corporativa",
-        preco_atual=36.5,
-        variacao_dia_pct=None,
-        volume_financeiro="R$ 1,00 Bi",
-        p_vp="1.2",
-        p_l="4.5",
-        dividend_yield="12,00%",
-        dados_json="{}",
-        modelo_ia="gemini-2.5-flash",
-        relatorio_ia=" Relatório ",
+        preco=36.5,
+        variacao_dia_pct=0.0,
+        volume_financeiro=1_000_000_000.0,
+        p_vp=1.2,
+        p_l=4.5,
+        dy_12m_pct=12.0,
+        dados={},
     )
-    sessao_db.add(reg)
-    sessao_db.commit()
-    # Força NULL direto no banco caso o default da coluna tenha preenchido 0.0 no INSERT
-    from sqlalchemy import text
-    sessao_db.execute(text("UPDATE analises_ativos SET variacao_dia_pct = NULL"))
+    sessao_db.add(cot)
+    sessao_db.flush()
+    ativo.ultima_cotacao_id = cot.id
     sessao_db.commit()
 
     resp = client.get("/")
     assert resp.status_code == 200
     assert "PETR4" in resp.text
     assert "+0,00%" in resp.text
+
+    # Garante também que o template home.html suporta variacao_dia_pct=None sem levantar TypeError
+    linha_nula = SimpleNamespace(
+        ticker="VALE3",
+        nome_empresa="Vale ON",
+        tipo_ativo="Acao",
+        moeda_cotacao="BRL",
+        preco_atual=60.0,
+        variacao_dia_pct=None,
+        volume_financeiro=None,
+        p_l=None,
+        p_vp=None,
+        dy_12m_pct=None,
+        coletado_em=None,
+    )
+    monkeypatch.setattr(main, "obter_recentes_seguro", lambda _db: [linha_nula])
+    resp2 = client.get("/")
+    assert resp2.status_code == 200
+    assert "VALE3" in resp2.text
+    assert "+0,00%" in resp2.text

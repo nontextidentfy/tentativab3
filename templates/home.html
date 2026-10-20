@@ -278,7 +278,6 @@
 <section class="table-panel">
   <div class="table-header-flex">
     <h3>🗂️ Base de Ativos Catalogados Recentemente (B3)</h3>
-    <span style="font-size: 0.8rem; color: var(--apagado);">Atualizações automáticas da B3</span>
   </div>
 
   <div class="table-wrapper">
@@ -294,6 +293,7 @@
           <th>P/L</th>
           <th>P/VP</th>
           <th>DY (12m)</th>
+          <th>Coletado em</th>
         </tr>
       </thead>
       <tbody>
@@ -305,20 +305,23 @@
             </a>
           </td>
           <td>{{ r.nome_empresa }}</td>
-          <td><span class="badge">{{ r.tipo_ativo }}</span></td>
-          <td><strong>R$ {{ r.preco_atual | moeda_br }}</strong></td>
+          <td><span class="badge">{{ DESCRICAO_TIPO.get(r.tipo_ativo, r.tipo_ativo) }}</span></td>
+          <td><strong>{{ r.preco_atual | moeda_br(r.moeda_cotacao or 'BRL') }}</strong></td>
           {% set var_dia = r.variacao_dia_pct or 0 %}
           <td class="{{ 'pos' if var_dia >= 0 else 'neg' }}">
-            {{ '+' if var_dia >= 0 else '' }}{{ var_dia | moeda_br }}%
+            {{ '+' if var_dia >= 0 else '' }}{{ var_dia | numero_br(2) }}%
           </td>
-          <td>{{ r.volume_financeiro or 'N/D' }}</td>
-          <td>{{ r.p_l or 'N/D' }}</td>
-          <td>{{ r.p_vp or 'N/D' }}</td>
-          <td class="pos"><strong>{{ r.dividend_yield or 'N/D' }}</strong></td>
+          <td>{{ r.volume_financeiro | moeda_grande_br(r.moeda_cotacao or 'BRL') }}</td>
+          <td>{{ r.p_l | numero_br(2) }}</td>
+          <td>{{ r.p_vp | numero_br(2) }}</td>
+          <td class="{{ 'pos' if (r.dy_12m_pct or 0) > 0 else '' }}">
+            <strong>{{ r.dy_12m_pct | percentual_br(2, True) }}</strong>
+          </td>
+          <td style="font-size: 0.82rem; color: var(--suave);">{{ r.coletado_em | horario_br }}</td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="9" style="text-align:center; padding:2.5rem; color:var(--apagado);">
+          <td colspan="10" style="text-align:center; padding:2.5rem; color:var(--apagado);">
             Nenhum ativo catalogado ainda. Digite um ticker na busca acima ou clique em um dos atalhos rápidos para iniciar!
           </td>
         </tr>

@@ -46,8 +46,17 @@
         {% for item in itens %}
         <tr>
           <td><a data-carrega href="/analisar?ticker={{ item.ticker }}" style="color:var(--destaque); font-weight:700; text-decoration:none;">{{ item.ticker }}</a></td>
-          <td>{{ ('R$ ' ~ (item.preco_atual | moeda_br)) if item.preco_atual else 'Consulte o ativo' }}</td>
-          <td>{{ ('R$ ' ~ (item.preco_alvo | moeda_br)) if item.preco_alvo else 'Sem alerta' }}</td>
+          <td>
+            {% if item.preco_atual is not none %}
+              <strong>{{ item.preco_atual | moeda_br }}</strong>
+              {% if item.coletado_em %}
+                <span style="display:block; font-size:.76rem; color:var(--suave);">{{ item.coletado_em | horario_br }}</span>
+              {% endif %}
+            {% else %}
+              Consulte o ativo
+            {% endif %}
+          </td>
+          <td>{{ (item.preco_alvo | moeda_br) if item.preco_alvo is not none else 'Sem alerta' }}</td>
           <td>
             {% if item.alerta_atingido %}
               <span class="pos" style="font-weight:700;">🔔 Abaixo/Igual ao Alvo!</span>

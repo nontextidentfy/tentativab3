@@ -18,17 +18,15 @@ from slowapi.errors import RateLimitExceeded
 import servico_analise as svc
 import seguranca as auth
 from banco import (
+    AnaliseIA,
+    Ativo,
+    Cotacao,
     MonitoramentoUsuario,
-    RegistroAnalise,
     Usuario,
     agora_utc,
     obter_sessao_banco,
     SessionLocal,
-    sincronizar_sequencias_postgres,
 )
-
-# Garante que as sequências de ID do PostgreSQL estejam sincronizadas ao iniciar
-sincronizar_sequencias_postgres()
 
 PASTA_PROJETO = os.path.dirname(os.path.abspath(__file__))
 RATE_LIMIT_STORAGE_URI = (os.getenv("RATE_LIMIT_STORAGE_URI") or "memory://").strip()
@@ -60,6 +58,7 @@ app.state.limiter = limiter
 
 templates = Jinja2Templates(directory=os.path.join(PASTA_PROJETO, "templates"))
 templates.env.globals["PERFIS_OPCOES"] = PERFIS_OPCOES
+templates.env.globals["DESCRICAO_TIPO"] = svc.DESCRICAO_TIPO
 log = logging.getLogger("investidor_ia")
 
 HORAS_CACHE = 24
@@ -74,35 +73,209 @@ def renderizar_markdown(texto: str) -> str:
     return md.markdown(texto_seguro, extensions=["extra", "sane_lists"])
 
 
-def filtro_moeda_br(valor):
-    return svc.br(valor, 2)
+def filtro_moeda_br(valor, simbolo: str = "R$") -> str:
+    v = svc.numero(valor)
+    if v is None:
+        return "N/D"
+    simb = svc.SIMBOLOS_MOEDA.get(simbolo, simbolo) if simbolo else ""
+    prefixo = f"{simb} " if simb else ""
+    return f"{prefixo}{svc.br(v, 2)}"
 
 
-def filtro_horario_br(data_utc):
+def filtro_numero_br(valor, casas: int = 2) -> str:
+    return svc.br(valor, casas)
+
+
+def filtro_percentual_br(valor, casas: int = 2, ja_percentual: bool = False) -> str:
+    return svc.formatar_percentual(valor, casas=casas, ja_percentual=ja_percentual)
+
+
+def filtro_moeda_grande_br(valor, moeda: str = "BRL") -> str:
+    return svc.formatar_moeda_grande(valor, moeda=moeda)
+
+
+def filtro_inteiro_br(valor) -> str:
+    return svc.inteiro_br(valor)
+
+
+def filtro_horario_br(data_utc) -> str:
     if not data_utc:
         return "N/D"
     return (data_utc + FUSO_BRASILIA).strftime("%d/%m/%Y às %H:%M")
 
 
 templates.env.filters["moeda_br"] = filtro_moeda_br
+templates.env.filters["numero_br"] = filtro_numero_br
+templates.env.filters["percentual_br"] = filtro_percentual_br
+templates.env.filters["moeda_grande_br"] = filtro_moeda_grande_br
+templates.env.filters["inteiro_br"] = filtro_inteiro_br
 templates.env.filters["horario_br"] = filtro_horario_br
 
 
 def obter_recentes_seguro(db: Session):
+    """
+    Busca até 12 ativos mais recentes em uma única consulta JOIN (ativos -> cotacoes),
+    sem carregar o JSON pesado de dados nem o texto de relatório.
+    """
     try:
-        registros = db.query(RegistroAnalise).order_by(RegistroAnalise.data_criacao.desc()).limit(100).all()
-        unicos = []
-        vistos = set()
-        for r in registros:
-            if r.ticker not in vistos:
-                vistos.add(r.ticker)
-                unicos.append(r)
-                if len(unicos) == 12:
-                    break
-        return unicos
+        linhas = (
+            db.query(
+                Ativo.ticker.label("ticker"),
+                Ativo.nome.label("nome_empresa"),
+                Ativo.tipo.label("tipo_ativo"),
+                Ativo.moeda_cotacao.label("moeda_cotacao"),
+                Cotacao.preco.label("preco_atual"),
+                Cotacao.variacao_dia_pct.label("variacao_dia_pct"),
+                Cotacao.volume_financeiro.label("volume_financeiro"),
+                Cotacao.p_l.label("p_l"),
+                Cotacao.p_vp.label("p_vp"),
+                Cotacao.dy_12m_pct.label("dy_12m_pct"),
+                Cotacao.coletado_em.label("coletado_em"),
+            )
+            .join(Cotacao, Ativo.ultima_cotacao_id == Cotacao.id)
+            .order_by(Cotacao.coletado_em.desc())
+            .limit(12)
+            .all()
+        )
+        return linhas
     except Exception:
         log.exception("Erro ao buscar ativos recentes")
         return []
+
+
+def _salvar_coleta_no_banco(
+    db: Session,
+    ticker_ok: str,
+    dados: dict,
+    relatorio_md: str,
+    motor_usado: str,
+    veio_da_ia: bool,
+    data_atual: datetime.datetime,
+) -> None:
+    ide = dados.get("Identificacao") or {}
+    cot = dados.get("Cotacao_e_Mercado") or {}
+    fluxo = dados.get("Fluxo_e_Volume") or {}
+    val = dados.get("Valuation") or {}
+    rent = dados.get("Rentabilidade_e_Eficiencia") or {}
+    end = dados.get("Endividamento_e_Caixa") or {}
+    prov = dados.get("Proventos") or {}
+    num = dados.get("Numeros") or {}
+    meta = dados.get("Metadados") or {}
+
+    tipo_cod = meta.get("tipo") or num.get("tipo") or ide.get("Tipo_Codigo") or "Acao"
+    moeda_cot = meta.get("moeda_cotacao") or ide.get("Moeda_Cotacao") or "BRL"
+    site_val = ide.get("Site_Oficial")
+    if site_val and str(site_val).strip().upper() == "N/D":
+        site_val = None
+
+    ativo = db.query(Ativo).filter(Ativo.ticker == ticker_ok).first()
+    if not ativo:
+        ativo = Ativo(
+            ticker=ticker_ok,
+            nome=ide.get("Nome_Empresa") or ticker_ok,
+            tipo=tipo_cod,
+            setor=ide.get("Setor"),
+            industria=ide.get("Industria"),
+            site=site_val,
+            resumo=ide.get("Resumo_Negocio"),
+            moeda_cotacao=moeda_cot,
+            atualizado_em=data_atual,
+        )
+        db.add(ativo)
+        db.flush()
+    else:
+        ativo.nome = ide.get("Nome_Empresa") or ativo.nome
+        ativo.tipo = tipo_cod
+        ativo.setor = ide.get("Setor")
+        ativo.industria = ide.get("Industria")
+        ativo.site = site_val
+        ativo.resumo = ide.get("Resumo_Negocio")
+        ativo.moeda_cotacao = moeda_cot
+        ativo.atualizado_em = data_atual
+
+    preco_val = svc.numero(cot.get("Preco_Atual"))
+    if preco_val is None:
+        preco_val = svc.numero(num.get("preco_atual"))
+
+    var_dia_val = svc.numero(cot.get("Variacao_Dia"))
+    if var_dia_val is None:
+        var_dia_val = svc.numero(num.get("variacao_dia_pct"))
+    if var_dia_val is None:
+        var_dia_val = 0.0
+
+    vol_fin_val = svc.numero(fluxo.get("Volume_Financeiro_Dia"))
+    if vol_fin_val is None:
+        vol_fin_val = svc.numero(num.get("vol_financeiro_dia"))
+
+    dy_pct_val = svc.numero(prov.get("Dividend_Yield_12m_Pct"))
+    if dy_pct_val is None:
+        dy_pct_val = svc.numero(num.get("dy_12m"))
+
+    div_12m_val = svc.numero(prov.get("Total_Pago_12m_por_Cota"))
+    if div_12m_val is None:
+        div_12m_val = svc.numero(num.get("dividendos_12m"))
+
+    graham_val = svc.numero(val.get("Valor_Intrinseco_Graham"))
+    if graham_val is None:
+        graham_val = svc.numero(num.get("graham"))
+
+    bazin_val = svc.numero(val.get("Preco_Teto_Bazin_6pct"))
+    if bazin_val is None:
+        bazin_val = svc.numero(num.get("bazin"))
+
+    min_52s_val = svc.numero(cot.get("Minima_52_Semanas"))
+    if min_52s_val is None:
+        min_52s_val = svc.numero(num.get("min_52s"))
+
+    max_52s_val = svc.numero(cot.get("Maxima_52_Semanas"))
+    if max_52s_val is None:
+        max_52s_val = svc.numero(num.get("max_52s"))
+
+    nova_cotacao = Cotacao(
+        ticker=ticker_ok,
+        coletado_em=data_atual,
+        preco=preco_val,
+        variacao_dia_pct=var_dia_val,
+        volume_acoes=svc.numero(fluxo.get("Volume_Acoes_Dia")),
+        volume_financeiro=vol_fin_val,
+        p_l=svc.numero(val.get("P_L")),
+        p_l_projetado=svc.numero(val.get("P_L_Projetado")),
+        p_vp=svc.numero(val.get("P_VP")),
+        ev_ebitda=svc.numero(val.get("EV_EBITDA")),
+        lpa=svc.numero(val.get("LPA")),
+        vpa=svc.numero(val.get("VPA")),
+        dy_12m_pct=dy_pct_val,
+        dividendos_12m=div_12m_val,
+        graham=graham_val,
+        bazin=bazin_val,
+        roe=svc.numero(rent.get("ROE")),
+        margem_liquida=svc.numero(rent.get("Margem_Liquida")),
+        ebitda=svc.numero(end.get("EBITDA")),
+        divida_liquida=svc.numero(end.get("Divida_Liquida")),
+        alavancagem=svc.numero(end.get("Divida_Liquida_sobre_EBITDA")),
+        min_52s=min_52s_val,
+        max_52s=max_52s_val,
+        valor_mercado=svc.numero(cot.get("Valor_de_Mercado")),
+        dados=dados,
+    )
+    db.add(nova_cotacao)
+    db.flush()
+
+    ativo.ultima_cotacao_id = nova_cotacao.id
+
+    if veio_da_ia:
+        db.add(
+            AnaliseIA(
+                ticker=ticker_ok,
+                cotacao_id=nova_cotacao.id,
+                modelo=motor_usado,
+                veio_da_ia=True,
+                relatorio_md=relatorio_md,
+                criado_em=data_atual,
+            )
+        )
+
+    db.commit()
 
 
 def _mensagem_validacao(exc: RequestValidationError, padrao: str) -> str:
@@ -229,10 +402,10 @@ def analisar_ativo(
     db: Session = Depends(obter_sessao_banco),
     usuario: Optional[Usuario] = Depends(auth.obter_usuario_atual),
 ):
-    painel_ativos = obter_recentes_seguro(db)
     try:
         ticker_ok = svc.resolver_ticker(ticker)
     except svc.ErroAtivo as e:
+        painel_ativos = obter_recentes_seguro(db)
         return templates.TemplateResponse(
             request=request,
             name="home.html",
@@ -242,29 +415,62 @@ def analisar_ativo(
     limite = agora_utc() - datetime.timedelta(hours=HORAS_CACHE)
 
     if not atualizar:
-        registro = (
-            db.query(RegistroAnalise)
+        par_cache = (
+            db.query(Ativo, Cotacao)
+            .join(Cotacao, Ativo.ultima_cotacao_id == Cotacao.id)
             .filter(
-                RegistroAnalise.ticker == ticker_ok,
-                RegistroAnalise.data_dados >= limite,
+                Ativo.ticker == ticker_ok,
+                Cotacao.coletado_em >= limite,
             )
-            .order_by(RegistroAnalise.data_criacao.desc())
             .first()
         )
 
-        if registro:
-            dados = json.loads(registro.dados_json)
-            relatorio_html = renderizar_markdown(registro.relatorio_ia)
+        if par_cache:
+            _, cotacao_cache = par_cache
+            dados_cache = (
+                cotacao_cache.dados
+                if isinstance(cotacao_cache.dados, dict)
+                else json.loads(cotacao_cache.dados)
+            )
+            analise_cache = (
+                db.query(AnaliseIA)
+                .filter(AnaliseIA.cotacao_id == cotacao_cache.id)
+                .order_by(AnaliseIA.criado_em.desc())
+                .first()
+            )
+            if analise_cache:
+                relatorio_md = analise_cache.relatorio_md
+                motor_cache = analise_cache.modelo
+            else:
+                relatorio_md, motor_cache, veio_ia_agora = svc.gerar_relatorio_ia(dados_cache)
+                if veio_ia_agora:
+                    try:
+                        db.add(
+                            AnaliseIA(
+                                ticker=ticker_ok,
+                                cotacao_id=cotacao_cache.id,
+                                modelo=motor_cache,
+                                veio_da_ia=True,
+                                relatorio_md=relatorio_md,
+                                criado_em=agora_utc(),
+                            )
+                        )
+                        db.commit()
+                    except Exception:
+                        db.rollback()
+
+            relatorio_html = renderizar_markdown(relatorio_md)
+            painel_ativos = obter_recentes_seguro(db)
             return templates.TemplateResponse(
                 request=request,
                 name="resultado.html",
                 context={
                     "usuario": usuario,
-                    "dados": dados,
+                    "dados": dados_cache,
                     "relatorio_html": relatorio_html,
                     "origem": "Banco de Dados (Cache 24h)",
-                    "motor": registro.modelo_ia,
-                    "data_dados": registro.data_dados,
+                    "motor": motor_cache,
+                    "data_dados": cotacao_cache.coletado_em,
                     "painel_ativos": painel_ativos,
                 },
             )
@@ -272,6 +478,7 @@ def analisar_ativo(
     try:
         dados = svc.extrair_raio_x_b3(ticker_ok)
     except svc.ErroAtivo as e:
+        painel_ativos = obter_recentes_seguro(db)
         return templates.TemplateResponse(
             request=request,
             name="home.html",
@@ -279,6 +486,7 @@ def analisar_ativo(
         )
     except Exception:
         log.exception("Erro ao extrair %s", ticker_ok)
+        painel_ativos = obter_recentes_seguro(db)
         return templates.TemplateResponse(
             request=request,
             name="home.html",
@@ -289,34 +497,25 @@ def analisar_ativo(
             },
         )
 
-    relatorio_md, motor_usado = svc.gerar_relatorio_ia(dados)
+    relatorio_md, motor_usado, veio_da_ia = svc.gerar_relatorio_ia(dados)
     relatorio_html = renderizar_markdown(relatorio_md)
     data_atual = agora_utc()
 
-    if "Algorítmico" not in motor_usado:
-        try:
-            db.add(
-                RegistroAnalise(
-                    ticker=ticker_ok,
-                    nome_empresa=dados["Identificacao"]["Nome_Empresa"],
-                    tipo_ativo=dados["Identificacao"]["Tipo_Ativo"],
-                    preco_atual=dados["Numeros"]["preco_atual"],
-                    variacao_dia_pct=dados["Numeros"].get("variacao_dia_pct", 0.0),
-                    volume_financeiro=dados["Fluxo_e_Volume"]["Volume_Financeiro_Dia"],
-                    p_vp=str(dados["Valuation"]["P_VP"]),
-                    p_l=str(dados["Valuation"]["P_L"]),
-                    dividend_yield=dados["Proventos"]["Dividend_Yield_Real_12m"],
-                    dados_json=json.dumps(dados, ensure_ascii=False),
-                    modelo_ia=motor_usado,
-                    relatorio_ia=relatorio_md,
-                    data_dados=data_atual,
-                )
-            )
-            db.commit()
-        except Exception:
-            db.rollback()
-            log.exception("Erro ao gravar cache no PostgreSQL")
+    try:
+        _salvar_coleta_no_banco(
+            db=db,
+            ticker_ok=ticker_ok,
+            dados=dados,
+            relatorio_md=relatorio_md,
+            motor_usado=motor_usado,
+            veio_da_ia=veio_da_ia,
+            data_atual=data_atual,
+        )
+    except Exception:
+        db.rollback()
+        log.exception("Erro ao gravar coleta no banco de dados")
 
+    painel_ativos = obter_recentes_seguro(db)
     return templates.TemplateResponse(
         request=request,
         name="resultado.html",
@@ -570,35 +769,41 @@ def painel_watchlist(
     if not usuario:
         return RedirectResponse(url="/login?msg=Faca+login+para+acessar+sua+Watchlist+privada.", status_code=303)
 
-    itens = (
-        db.query(MonitoramentoUsuario)
+    # Consulta única com OUTER JOIN para trazer a última cotação de todos os itens (sem N+1)
+    linhas = (
+        db.query(
+            MonitoramentoUsuario.id.label("id"),
+            MonitoramentoUsuario.ticker.label("ticker"),
+            MonitoramentoUsuario.preco_alvo_alerta.label("preco_alvo"),
+            MonitoramentoUsuario.notas_documentacao.label("notas"),
+            MonitoramentoUsuario.data_adicao.label("data_adicao"),
+            Cotacao.preco.label("preco_atual"),
+            Cotacao.coletado_em.label("coletado_em"),
+        )
+        .outerjoin(Ativo, Ativo.ticker == MonitoramentoUsuario.ticker)
+        .outerjoin(Cotacao, Ativo.ultima_cotacao_id == Cotacao.id)
         .filter(MonitoramentoUsuario.usuario_id == usuario.id)
         .order_by(MonitoramentoUsuario.data_adicao.desc())
         .all()
     )
 
-    # Cruza os ativos da watchlist com a última cotação conhecida no banco para disparar alertas
     lista_enriquecida = []
-    for item in itens:
-        ultimo_reg = (
-            db.query(RegistroAnalise)
-            .filter(RegistroAnalise.ticker == item.ticker)
-            .order_by(RegistroAnalise.data_criacao.desc())
-            .first()
+    for linha in linhas:
+        preco_atual = linha.preco_atual
+        alerta_atingido = bool(
+            preco_atual is not None
+            and linha.preco_alvo is not None
+            and preco_atual <= linha.preco_alvo
         )
-        preco_atual = ultimo_reg.preco_atual if ultimo_reg else None
-        alerta_atingido = False
-        if preco_atual and item.preco_alvo_alerta and preco_atual <= item.preco_alvo_alerta:
-            alerta_atingido = True
-
         lista_enriquecida.append({
-            "id": item.id,
-            "ticker": item.ticker,
+            "id": linha.id,
+            "ticker": linha.ticker,
             "preco_atual": preco_atual,
-            "preco_alvo": item.preco_alvo_alerta,
+            "coletado_em": linha.coletado_em,
+            "preco_alvo": linha.preco_alvo,
             "alerta_atingido": alerta_atingido,
-            "notas": item.notas_documentacao,
-            "data_adicao": item.data_adicao,
+            "notas": linha.notas,
+            "data_adicao": linha.data_adicao,
         })
 
     return templates.TemplateResponse(
@@ -623,6 +828,13 @@ def adicionar_watchlist(
 ):
     if not usuario:
         return RedirectResponse(url="/login", status_code=303)
+    if not usuario.email_confirmado:
+        msg_confirm = (
+            "Confirme seu endereço de e-mail para adicionar ativos à Watchlist. "
+            "Use o botão 'Reenviar Link de Confirmação' no topo da página."
+        )
+        return RedirectResponse(url=f"/watchlist?erro={quote_plus(msg_confirm)}", status_code=303)
+
     try:
         ticker_ok = svc.resolver_ticker(ticker)
     except svc.ErroAtivo as e:
@@ -631,6 +843,7 @@ def adicionar_watchlist(
     alvo_val = svc.numero(preco_alvo.replace(",", ".")) if preco_alvo.strip() else None
     if alvo_val is not None and alvo_val <= 0:
         alvo_val = None
+
     db.add(
         MonitoramentoUsuario(
             usuario_id=usuario.id,
@@ -639,7 +852,13 @@ def adicionar_watchlist(
             notas_documentacao=notas.strip()[:500],
         )
     )
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        msg_dup = f"O ativo {ticker_ok} já está cadastrado na sua Watchlist."
+        return RedirectResponse(url=f"/watchlist?erro={quote_plus(msg_dup)}", status_code=303)
+
     return RedirectResponse(url=f"/watchlist?msg=Ativo+{ticker_ok}+adicionado+a+sua+Watchlist!", status_code=303)
 
 

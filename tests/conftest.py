@@ -12,6 +12,9 @@ import main
 import servico_analise as svc
 from tests.fixtures.ativos import RELATORIO_PADRAO_MD, obter_fixture_ativo
 
+EXTRAIR_RAIO_X_REAL = svc.extrair_raio_x_b3
+GERAR_RELATORIO_IA_REAL = svc.gerar_relatorio_ia
+
 
 @pytest.fixture(autouse=True)
 def preparar_banco_e_mocks(monkeypatch):
@@ -35,7 +38,7 @@ def preparar_banco_e_mocks(monkeypatch):
         return obter_fixture_ativo(ticker)
 
     def _relatorio_falso(_dados: dict):
-        return RELATORIO_PADRAO_MD, "gemini-2.5-flash"
+        return RELATORIO_PADRAO_MD, "gemini-2.5-flash", True
 
     monkeypatch.setattr(svc.yf, "Search", _BuscaFalsaYahoo)
     monkeypatch.setattr(svc, "extrair_raio_x_b3", _extrair_falso)

@@ -59,7 +59,7 @@ def upgrade() -> None:
     sa.Column('preco_alvo_alerta', sa.Float(), nullable=True),
     sa.Column('notas_documentacao', sa.Text(), nullable=True),
     sa.Column('data_adicao', sa.DateTime(), nullable=True),
-    sa.ForeignKeyConstraint(['usuario_id'], ['usuarios.id'], ),
+    sa.ForeignKeyConstraint(['usuario_id'], ['usuarios.id'], name='monitoramento_usuarios_usuario_id_fkey'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_monitoramento_usuarios_id'), 'monitoramento_usuarios', ['id'], unique=False)

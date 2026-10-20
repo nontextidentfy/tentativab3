@@ -3,6 +3,7 @@ Serviço central do Investidor IA.
 Extrai fundamentos, documentação contábil e fluxo de volume da B3 (via Yahoo Finance)
 e gera parecer com o Gemini (com fallback algorítmico caso a cota da API esgote).
 """
+import copy
 import datetime
 import json
 import math
@@ -77,7 +78,7 @@ def inteiro_br(valor):
 
 def arredondar(valor, casas=2):
     v = numero(valor)
-    return round(v, casas) if v is not None else "N/D"
+    return round(v, casas) if v is not None else None
 
 
 def formatar_moeda_grande(valor, moeda="BRL"):
@@ -85,18 +86,22 @@ def formatar_moeda_grande(valor, moeda="BRL"):
     if v is None:
         return "N/D"
     simbolo = SIMBOLOS_MOEDA.get(moeda, moeda)
+    prefixo = f"{simbolo} " if simbolo else ""
     if abs(v) >= 1_000_000_000:
-        return f"{simbolo} {br(v / 1_000_000_000)} Bi"
+        return f"{prefixo}{br(v / 1_000_000_000)} Bi"
     if abs(v) >= 1_000_000:
-        return f"{simbolo} {br(v / 1_000_000)} Mi"
+        return f"{prefixo}{br(v / 1_000_000)} Mi"
     if abs(v) >= 1_000:
-        return f"{simbolo} {br(v / 1_000)} Mil"
-    return f"{simbolo} {br(v)}"
+        return f"{prefixo}{br(v / 1_000)} Mil"
+    return f"{prefixo}{br(v)}"
 
 
-def formatar_percentual(valor):
+def formatar_percentual(valor, casas=2, ja_percentual=False):
     v = numero(valor)
-    return "N/D" if v is None else f"{br(v * 100)}%"
+    if v is None:
+        return "N/D"
+    pct = v if ja_percentual else (v * 100.0)
+    return f"{br(pct, casas)}%"
 
 
 def normalizar_ticker(ticker_usuario: str) -> str:
@@ -325,7 +330,8 @@ def dividendos_ultimos_12m(ativo):
     return float(recentes.sum()), int(len(recentes))
 
 
-def extrair_fluxo_pregoes(ativo, simbolo="R$"):
+def extrair_fluxo_pregoes(ativo) -> list[dict]:
+    """Retorna os últimos pregões com valores numéricos crus."""
     pregoes = []
     try:
         hist = ativo.history(period="5d")
@@ -344,13 +350,17 @@ def extrair_fluxo_pregoes(ativo, simbolo="R$"):
                     var_dia = 0.0
                 fechamento_ant = fech
 
-                direcao = "Entrada Compradora" if var_dia > 0.15 else ("Saída Vendedora" if var_dia < -0.15 else "Neutro")
+                direcao = (
+                    "Entrada Compradora"
+                    if var_dia > 0.15
+                    else ("Saída Vendedora" if var_dia < -0.15 else "Neutro")
+                )
                 pregoes.append({
                     "data": data_idx.strftime("%d/%m/%Y"),
-                    "fechamento": f"{simbolo} {br(fech)}",
+                    "fechamento": round(fech, 4),
                     "variacao_pct": round(var_dia, 2),
-                    "volume_acoes": inteiro_br(vol),
-                    "volume_financeiro": formatar_moeda_grande(vol_fin),
+                    "volume_acoes": vol,
+                    "volume_financeiro": round(vol_fin, 2),
                     "fluxo": direcao,
                 })
             pregoes.reverse()
@@ -360,6 +370,10 @@ def extrair_fluxo_pregoes(ativo, simbolo="R$"):
 
 
 def extrair_raio_x_b3(ticker_usuario: str) -> dict:
+    """
+    Extrai dados fundamentalistas e de mercado da B3 devolvendo números crus (float/int/None)
+    e metadados de moeda/observação. Nenhuma formatação textual (R$, %, Mi/Bi, N/D) ocorre aqui.
+    """
     ticker = resolver_ticker(ticker_usuario)
     ativo = yf.Ticker(f"{ticker}.SA")
 
@@ -385,6 +399,7 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     moeda_balanco = info.get("financialCurrency") or moeda_cotacao
     balanco_em_outra_moeda = moeda_balanco != moeda_cotacao
     simbolo = SIMBOLOS_MOEDA.get(moeda_cotacao, moeda_cotacao)
+    simbolo_balanco = SIMBOLOS_MOEDA.get(moeda_balanco, moeda_balanco)
 
     fechamento_anterior = numero(info.get("previousClose")) or preco
     abertura_dia = numero(info.get("open")) or numero(info.get("regularMarketOpen")) or preco
@@ -392,31 +407,32 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     max_dia = numero(info.get("dayHigh")) or numero(info.get("regularMarketDayHigh")) or preco
     variacao_dia_pct = ((preco / fechamento_anterior) - 1) * 100 if fechamento_anterior > 0 else 0.0
 
-    vol_acoes_dia = numero(info.get("volume")) or numero(info.get("regularMarketVolume")) or 0
-    vol_medio_10d = numero(info.get("averageDailyVolume10Day")) or numero(info.get("averageVolume10days")) or 0
-    vol_medio_3m = numero(info.get("averageVolume")) or 0
-    vol_financeiro_dia = preco * vol_acoes_dia
+    vol_acoes_dia = int(numero(info.get("volume")) or numero(info.get("regularMarketVolume")) or 0)
+    vol_medio_10d = int(numero(info.get("averageDailyVolume10Day")) or numero(info.get("averageVolume10days")) or 0)
+    vol_medio_3m = int(numero(info.get("averageVolume")) or 0)
+    vol_financeiro_dia = float(preco * vol_acoes_dia)
 
     relacao_volume_media = (vol_acoes_dia / vol_medio_3m * 100) if vol_medio_3m and vol_medio_3m > 0 else None
     if relacao_volume_media is not None:
         if relacao_volume_media >= 120 and variacao_dia_pct > 0:
-            status_fluxo = f"Forte Entrada de Volume ({br(relacao_volume_media, 0)}% da média)"
+            status_fluxo = f"Forte Entrada de Volume ({round(relacao_volume_media)}% da média)"
         elif relacao_volume_media >= 120 and variacao_dia_pct < 0:
-            status_fluxo = f"Forte Pressão Vendedora ({br(relacao_volume_media, 0)}% da média)"
+            status_fluxo = f"Forte Pressão Vendedora ({round(relacao_volume_media)}% da média)"
         else:
-            status_fluxo = f"Volume Normal ({br(relacao_volume_media, 0)}% da média 3m)"
+            status_fluxo = f"Volume Normal ({round(relacao_volume_media)}% da média 3m)"
     else:
         status_fluxo = "Volume em linha com o histórico"
 
     dividendos_12m, qtd_pagamentos = dividendos_ultimos_12m(ativo)
-    dy_12m = (dividendos_12m / preco) * 100 if preco > 0 else 0.0
+    dy_12m_razao = (dividendos_12m / preco) if preco > 0 else 0.0
+    dy_12m_pct = dy_12m_razao * 100.0
 
-    p_l = numero(info.get("trailingPE"))
-    p_l_proj = numero(info.get("forwardPE"))
-    p_vp = numero(info.get("priceToBook"))
-    ev_ebitda = numero(info.get("enterpriseToEbitda"))
-    lpa = numero(info.get("trailingEps"))
-    vpa = numero(info.get("bookValue"))
+    p_l = arredondar(info.get("trailingPE"))
+    p_l_proj = arredondar(info.get("forwardPE"))
+    p_vp = arredondar(info.get("priceToBook"))
+    ev_ebitda = arredondar(info.get("enterpriseToEbitda"))
+    lpa = arredondar(info.get("trailingEps"))
+    vpa = arredondar(info.get("bookValue"))
 
     graham = None
     if eh_fundo:
@@ -424,112 +440,140 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     elif balanco_em_outra_moeda:
         obs_graham = f"Balanço em {moeda_balanco}"
     elif lpa and vpa and lpa > 0 and vpa > 0:
-        graham = math.sqrt(FATOR_GRAHAM * lpa * vpa)
+        graham = round(math.sqrt(FATOR_GRAHAM * lpa * vpa), 2)
         obs_graham = ""
     else:
         obs_graham = "Lucro ou patrimônio negativo"
 
-    bazin = dividendos_12m / TAXA_BAZIN if dividendos_12m > 0 else None
+    bazin = round(dividendos_12m / TAXA_BAZIN, 2) if dividendos_12m > 0 else None
     obs_bazin = "" if bazin else "Sem proventos em 12 meses"
+
+    margem_graham_pct = round(((graham / preco) - 1) * 100, 2) if graham and preco > 0 else None
+    margem_bazin_pct = round(((bazin / preco) - 1) * 100, 2) if bazin and preco > 0 else None
 
     divida_total = numero(info.get("totalDebt"))
     caixa_total = numero(info.get("totalCash"))
     divida_liquida = (divida_total - caixa_total) if (divida_total is not None and caixa_total is not None) else None
     ebitda = numero(info.get("ebitda"))
-    alavancagem = (divida_liquida / ebitda) if (divida_liquida is not None and ebitda and ebitda > 0) else None
+    alavancagem = round(divida_liquida / ebitda, 2) if (divida_liquida is not None and ebitda and ebitda > 0) else None
 
     min_52s = numero(info.get("fiftyTwoWeekLow"))
     max_52s = numero(info.get("fiftyTwoWeekHigh"))
     resumo = (info.get("longBusinessSummary") or "Sem descrição institucional cadastrada.").strip()
-    liquidez = numero(info.get("currentRatio"))
+    liquidez = arredondar(info.get("currentRatio"))
     roe = numero(info.get("returnOnEquity"))
-    beta = numero(info.get("beta"))
+    beta = arredondar(info.get("beta"))
     acoes_circulacao = numero(info.get("sharesOutstanding"))
+    valor_mercado = numero(info.get("marketCap"))
+    enterprise_value = numero(info.get("enterpriseValue"))
 
-    historico_5d = extrair_fluxo_pregoes(ativo, simbolo)
+    historico_5d = extrair_fluxo_pregoes(ativo)
 
-    # Cálculo percentual da posição na faixa de 52 semanas
     pos_52s = 50.0
     if min_52s and max_52s and max_52s > min_52s:
         pos_52s = max(0.0, min(100.0, (preco - min_52s) / (max_52s - min_52s) * 100))
 
+    site_oficial = (info.get("website") or "").strip() or None
+
     return {
+        "Metadados": {
+            "moeda_cotacao": moeda_cotacao,
+            "simbolo": simbolo,
+            "moeda_balanco": moeda_balanco,
+            "simbolo_balanco": simbolo_balanco,
+            "tipo": tipo,
+            "obs_graham": obs_graham,
+            "obs_bazin": obs_bazin,
+        },
         "Identificacao": {
             "Ticker": ticker,
             "Nome_Empresa": (info.get("longName") or info.get("shortName") or ticker)[:200],
             "Tipo_Ativo": DESCRICAO_TIPO[tipo],
+            "Tipo_Codigo": tipo,
             "Setor": info.get("sector") or "Não especificado",
             "Industria": info.get("industry") or "Não especificado",
-            "Site_Oficial": info.get("website") or "N/D",
+            "Site_Oficial": site_oficial,
             "Moeda_do_Balanco": moeda_balanco,
+            "Moeda_Cotacao": moeda_cotacao,
+            "Simbolo_Moeda": simbolo,
+            "Simbolo_Moeda_Balanco": simbolo_balanco,
             "Data_Consulta": datetime.date.today().strftime("%d/%m/%Y"),
             "Resumo_Negocio": resumo[:1500],
         },
         "Cotacao_e_Mercado": {
-            "Preco_Atual": f"{simbolo} {br(preco)}",
-            "Variacao_Dia": f"{'+' if variacao_dia_pct >= 0 else ''}{br(variacao_dia_pct)}%",
-            "Abertura_Dia": f"{simbolo} {br(abertura_dia)}",
-            "Fechamento_Anterior": f"{simbolo} {br(fechamento_anterior)}",
-            "Faixa_Dia": f"{simbolo} {br(min_dia)} - {simbolo} {br(max_dia)}",
-            "Minima_52_Semanas": f"{simbolo} {br(min_52s)}" if min_52s else "N/D",
-            "Maxima_52_Semanas": f"{simbolo} {br(max_52s)}" if max_52s else "N/D",
-            "Valor_de_Mercado": formatar_moeda_grande(info.get("marketCap"), moeda_cotacao),
-            "Enterprise_Value_EV": formatar_moeda_grande(info.get("enterpriseValue"), moeda_cotacao),
+            "Preco_Atual": round(preco, 4),
+            "Variacao_Dia": round(variacao_dia_pct, 2),
+            "Abertura_Dia": round(abertura_dia, 4),
+            "Fechamento_Anterior": round(fechamento_anterior, 4),
+            "Minima_Dia": round(min_dia, 4),
+            "Maxima_Dia": round(max_dia, 4),
+            "Minima_52_Semanas": round(min_52s, 4) if min_52s is not None else None,
+            "Maxima_52_Semanas": round(max_52s, 4) if max_52s is not None else None,
+            "Posicao_52_Semanas": round(pos_52s, 1),
+            "Valor_de_Mercado": valor_mercado,
+            "Enterprise_Value_EV": enterprise_value,
         },
         "Fluxo_e_Volume": {
-            "Volume_Financeiro_Dia": formatar_moeda_grande(vol_financeiro_dia, moeda_cotacao),
-            "Volume_Acoes_Dia": inteiro_br(vol_acoes_dia),
-            "Volume_Medio_10d": inteiro_br(vol_medio_10d),
-            "Volume_Medio_3m": inteiro_br(vol_medio_3m),
+            "Volume_Financeiro_Dia": round(vol_financeiro_dia, 2),
+            "Volume_Acoes_Dia": vol_acoes_dia,
+            "Volume_Medio_10d": vol_medio_10d,
+            "Volume_Medio_3m": vol_medio_3m,
+            "Relacao_Volume_Media_Pct": round(relacao_volume_media, 1) if relacao_volume_media is not None else None,
             "Status_Fluxo": status_fluxo,
-            "Beta_Volatilidade": arredondar(beta),
-            "Total_Acoes_Emitidas": formatar_moeda_grande(acoes_circulacao, "").strip(),
+            "Beta_Volatilidade": beta,
+            "Total_Acoes_Emitidas": acoes_circulacao,
             "Pregoes_Recentes": historico_5d,
         },
         "Valuation": {
-            "P_L": arredondar(p_l),
-            "P_L_Projetado": arredondar(p_l_proj),
-            "P_VP": arredondar(p_vp),
-            "EV_EBITDA": arredondar(ev_ebitda),
-            "LPA": arredondar(lpa),
-            "VPA": arredondar(vpa),
-            "Valor_Intrinseco_Graham": f"{simbolo} {br(graham)}" if graham else f"N/D ({obs_graham})",
-            "Preco_Teto_Bazin_6pct": f"{simbolo} {br(bazin)}" if bazin else f"N/D ({obs_bazin})",
+            "P_L": p_l,
+            "P_L_Projetado": p_l_proj,
+            "P_VP": p_vp,
+            "EV_EBITDA": ev_ebitda,
+            "LPA": lpa,
+            "VPA": vpa,
+            "Valor_Intrinseco_Graham": graham,
+            "Obs_Graham": obs_graham,
+            "Margem_Graham_Pct": margem_graham_pct,
+            "Preco_Teto_Bazin_6pct": bazin,
+            "Obs_Bazin": obs_bazin,
+            "Margem_Bazin_Pct": margem_bazin_pct,
         },
         "Rentabilidade_e_Eficiencia": {
-            "ROE": formatar_percentual(roe),
-            "ROA": formatar_percentual(info.get("returnOnAssets")),
-            "Margem_Bruta": formatar_percentual(info.get("grossMargins")),
-            "Margem_EBITDA": formatar_percentual(info.get("ebitdaMargins")),
-            "Margem_Liquida": formatar_percentual(info.get("profitMargins")),
-            "Crescimento_Receita_YoY": formatar_percentual(info.get("revenueGrowth")),
-            "Crescimento_Lucros_YoY": formatar_percentual(info.get("earningsGrowth")),
+            "ROE": roe,
+            "ROA": numero(info.get("returnOnAssets")),
+            "Margem_Bruta": numero(info.get("grossMargins")),
+            "Margem_EBITDA": numero(info.get("ebitdaMargins")),
+            "Margem_Liquida": numero(info.get("profitMargins")),
+            "Crescimento_Receita_YoY": numero(info.get("revenueGrowth")),
+            "Crescimento_Lucros_YoY": numero(info.get("earningsGrowth")),
         },
         "Endividamento_e_Caixa": {
-            "Receita_Total_12m": formatar_moeda_grande(info.get("totalRevenue"), moeda_balanco),
-            "EBITDA": formatar_moeda_grande(ebitda, moeda_balanco),
-            "Caixa_Total": formatar_moeda_grande(caixa_total, moeda_balanco),
-            "Divida_Total": formatar_moeda_grande(divida_total, moeda_balanco),
-            "Divida_Liquida": formatar_moeda_grande(divida_liquida, moeda_balanco),
-            "Divida_Liquida_sobre_EBITDA": f"{br(alavancagem)}x" if alavancagem is not None else "N/D",
-            "Liquidez_Corrente": arredondar(liquidez),
-            "Fluxo_Caixa_Livre": formatar_moeda_grande(info.get("freeCashflow"), moeda_balanco),
+            "Receita_Total_12m": numero(info.get("totalRevenue")),
+            "EBITDA": ebitda,
+            "Caixa_Total": caixa_total,
+            "Divida_Total": divida_total,
+            "Divida_Liquida": divida_liquida,
+            "Divida_Liquida_sobre_EBITDA": alavancagem,
+            "Liquidez_Corrente": liquidez,
+            "Fluxo_Caixa_Livre": numero(info.get("freeCashflow")),
         },
         "Proventos": {
-            "Dividend_Yield_Real_12m": f"{br(dy_12m)}%",
-            "Total_Pago_12m_por_Cota": f"{simbolo} {br(dividendos_12m)}",
+            "Dividend_Yield_Real_12m": round(dy_12m_razao, 6),
+            "Dividend_Yield_12m_Pct": round(dy_12m_pct, 2),
+            "Total_Pago_12m_por_Cota": round(dividendos_12m, 4),
+            "Quantidade_Pagamentos_12m": qtd_pagamentos,
             "Frequencia_Pagamentos_12m": f"{qtd_pagamentos} pagamentos nos últimos 12 meses",
-            "Payout_Ratio": formatar_percentual(info.get("payoutRatio")),
+            "Payout_Ratio": numero(info.get("payoutRatio")),
         },
         "Numeros": {
-            "preco_atual": preco,
+            "preco_atual": round(preco, 4),
             "variacao_dia_pct": round(variacao_dia_pct, 2),
-            "vol_financeiro_dia": vol_financeiro_dia,
+            "vol_financeiro_dia": round(vol_financeiro_dia, 2),
             "min_52s": min_52s,
             "max_52s": max_52s,
             "pos_52s": round(pos_52s, 1),
-            "dividendos_12m": dividendos_12m,
-            "dy_12m": dy_12m,
+            "dividendos_12m": round(dividendos_12m, 4),
+            "dy_12m": round(dy_12m_pct, 2),
             "graham": graham,
             "obs_graham": obs_graham,
             "bazin": bazin,
@@ -539,21 +583,181 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     }
 
 
+def _moeda_txt(valor, simbolo="R$") -> str:
+    v = numero(valor)
+    if v is None:
+        return "N/D"
+    return f"{simbolo} {br(v, 2)}"
+
+
+def formatar_para_leitura(dados: dict) -> dict:
+    """
+    Recebe a estrutura de números crus de `extrair_raio_x_b3` e devolve uma cópia
+    com textos legíveis (R$, %, Mi/Bi, N/D) para o prompt da IA e para o terminal (`analisador.py`).
+    """
+    d = copy.deepcopy(dados)
+    meta = d.get("Metadados") or {}
+    ide = d.get("Identificacao") or {}
+    cot = d.get("Cotacao_e_Mercado") or {}
+    fluxo = d.get("Fluxo_e_Volume") or {}
+    val = d.get("Valuation") or {}
+    rent = d.get("Rentabilidade_e_Eficiencia") or {}
+    end = d.get("Endividamento_e_Caixa") or {}
+    prov = d.get("Proventos") or {}
+
+    moeda_cot = meta.get("moeda_cotacao") or ide.get("Moeda_Cotacao") or "BRL"
+    moeda_bal = meta.get("moeda_balanco") or ide.get("Moeda_do_Balanco") or moeda_cot
+    simbolo = meta.get("simbolo") or ide.get("Simbolo_Moeda") or SIMBOLOS_MOEDA.get(moeda_cot, "R$")
+
+    preco = cot.get("Preco_Atual")
+    var_dia = cot.get("Variacao_Dia")
+    min_dia = cot.get("Minima_Dia")
+    max_dia = cot.get("Maxima_Dia")
+    min_52s = cot.get("Minima_52_Semanas")
+    max_52s = cot.get("Maxima_52_Semanas")
+
+    graham = val.get("Valor_Intrinseco_Graham")
+    obs_graham = meta.get("obs_graham") or val.get("Obs_Graham") or ""
+    bazin = val.get("Preco_Teto_Bazin_6pct")
+    obs_bazin = meta.get("obs_bazin") or val.get("Obs_Bazin") or ""
+
+    pregoes_fmt = []
+    for p in fluxo.get("Pregoes_Recentes") or []:
+        fech_val = p.get("fechamento")
+        vol_fin_val = p.get("volume_financeiro")
+        pregoes_fmt.append({
+            "data": p.get("data"),
+            "fechamento": _moeda_txt(fech_val, simbolo) if isinstance(fech_val, (int, float)) else str(fech_val),
+            "variacao_pct": p.get("variacao_pct", 0.0),
+            "volume_acoes": inteiro_br(p.get("volume_acoes")) if isinstance(p.get("volume_acoes"), (int, float)) else str(p.get("volume_acoes")),
+            "volume_financeiro": formatar_moeda_grande(vol_fin_val, moeda_cot) if isinstance(vol_fin_val, (int, float)) else str(vol_fin_val),
+            "fluxo": p.get("fluxo", "Neutro"),
+        })
+
+    alav = end.get("Divida_Liquida_sobre_EBITDA")
+    dy_raw = prov.get("Dividend_Yield_Real_12m")
+    dy_txt = (
+        formatar_percentual(dy_raw, ja_percentual=False)
+        if isinstance(dy_raw, (int, float)) and abs(dy_raw) <= 1.5 and (prov.get("Dividend_Yield_12m_Pct") is not None)
+        else (formatar_percentual(prov.get("Dividend_Yield_12m_Pct"), ja_percentual=True) if isinstance(dy_raw, (int, float)) else str(dy_raw or "N/D"))
+    )
+    if prov.get("Dividend_Yield_12m_Pct") is not None:
+        dy_txt = f"{br(prov['Dividend_Yield_12m_Pct'])}%"
+
+    qtd_pag = prov.get("Quantidade_Pagamentos_12m")
+    freq_txt = prov.get("Frequencia_Pagamentos_12m") or (
+        f"{qtd_pag} pagamentos nos últimos 12 meses" if qtd_pag is not None else "N/D"
+    )
+
+    return {
+        "Identificacao": {
+            "Ticker": ide.get("Ticker"),
+            "Nome_Empresa": ide.get("Nome_Empresa"),
+            "Tipo_Ativo": ide.get("Tipo_Ativo"),
+            "Setor": ide.get("Setor"),
+            "Industria": ide.get("Industria"),
+            "Site_Oficial": ide.get("Site_Oficial") or "N/D",
+            "Moeda_do_Balanco": moeda_bal,
+            "Data_Consulta": ide.get("Data_Consulta"),
+            "Resumo_Negocio": ide.get("Resumo_Negocio"),
+        },
+        "Cotacao_e_Mercado": {
+            "Preco_Atual": _moeda_txt(preco, simbolo) if isinstance(preco, (int, float)) else str(preco),
+            "Variacao_Dia": (
+                f"{'+' if var_dia >= 0 else ''}{br(var_dia)}%"
+                if isinstance(var_dia, (int, float))
+                else str(var_dia)
+            ),
+            "Abertura_Dia": _moeda_txt(cot.get("Abertura_Dia"), simbolo),
+            "Fechamento_Anterior": _moeda_txt(cot.get("Fechamento_Anterior"), simbolo),
+            "Faixa_Dia": (
+                f"{_moeda_txt(min_dia, simbolo)} - {_moeda_txt(max_dia, simbolo)}"
+                if min_dia is not None and max_dia is not None
+                else str(cot.get("Faixa_Dia") or "N/D")
+            ),
+            "Minima_52_Semanas": _moeda_txt(min_52s, simbolo) if isinstance(min_52s, (int, float)) else str(min_52s or "N/D"),
+            "Maxima_52_Semanas": _moeda_txt(max_52s, simbolo) if isinstance(max_52s, (int, float)) else str(max_52s or "N/D"),
+            "Valor_de_Mercado": formatar_moeda_grande(cot.get("Valor_de_Mercado"), moeda_cot) if not isinstance(cot.get("Valor_de_Mercado"), str) else cot.get("Valor_de_Mercado"),
+            "Enterprise_Value_EV": formatar_moeda_grande(cot.get("Enterprise_Value_EV"), moeda_cot) if not isinstance(cot.get("Enterprise_Value_EV"), str) else cot.get("Enterprise_Value_EV"),
+        },
+        "Fluxo_e_Volume": {
+            "Volume_Financeiro_Dia": formatar_moeda_grande(fluxo.get("Volume_Financeiro_Dia"), moeda_cot) if not isinstance(fluxo.get("Volume_Financeiro_Dia"), str) else fluxo.get("Volume_Financeiro_Dia"),
+            "Volume_Acoes_Dia": inteiro_br(fluxo.get("Volume_Acoes_Dia")) if not isinstance(fluxo.get("Volume_Acoes_Dia"), str) else fluxo.get("Volume_Acoes_Dia"),
+            "Volume_Medio_10d": inteiro_br(fluxo.get("Volume_Medio_10d")) if not isinstance(fluxo.get("Volume_Medio_10d"), str) else fluxo.get("Volume_Medio_10d"),
+            "Volume_Medio_3m": inteiro_br(fluxo.get("Volume_Medio_3m")) if not isinstance(fluxo.get("Volume_Medio_3m"), str) else fluxo.get("Volume_Medio_3m"),
+            "Status_Fluxo": fluxo.get("Status_Fluxo"),
+            "Beta_Volatilidade": br(fluxo.get("Beta_Volatilidade")),
+            "Total_Acoes_Emitidas": formatar_moeda_grande(fluxo.get("Total_Acoes_Emitidas"), "").strip() if not isinstance(fluxo.get("Total_Acoes_Emitidas"), str) else fluxo.get("Total_Acoes_Emitidas"),
+            "Pregoes_Recentes": pregoes_fmt,
+        },
+        "Valuation": {
+            "P_L": br(val.get("P_L")),
+            "P_L_Projetado": br(val.get("P_L_Projetado")),
+            "P_VP": br(val.get("P_VP")),
+            "EV_EBITDA": br(val.get("EV_EBITDA")),
+            "LPA": br(val.get("LPA")),
+            "VPA": br(val.get("VPA")),
+            "Valor_Intrinseco_Graham": (
+                _moeda_txt(graham, simbolo)
+                if isinstance(graham, (int, float))
+                else (str(graham) if isinstance(graham, str) else f"N/D ({obs_graham})")
+            ),
+            "Preco_Teto_Bazin_6pct": (
+                _moeda_txt(bazin, simbolo)
+                if isinstance(bazin, (int, float))
+                else (str(bazin) if isinstance(bazin, str) else f"N/D ({obs_bazin})")
+            ),
+        },
+        "Rentabilidade_e_Eficiencia": {
+            "ROE": formatar_percentual(rent.get("ROE")) if not isinstance(rent.get("ROE"), str) else rent.get("ROE"),
+            "ROA": formatar_percentual(rent.get("ROA")) if not isinstance(rent.get("ROA"), str) else rent.get("ROA"),
+            "Margem_Bruta": formatar_percentual(rent.get("Margem_Bruta")) if not isinstance(rent.get("Margem_Bruta"), str) else rent.get("Margem_Bruta"),
+            "Margem_EBITDA": formatar_percentual(rent.get("Margem_EBITDA")) if not isinstance(rent.get("Margem_EBITDA"), str) else rent.get("Margem_EBITDA"),
+            "Margem_Liquida": formatar_percentual(rent.get("Margem_Liquida")) if not isinstance(rent.get("Margem_Liquida"), str) else rent.get("Margem_Liquida"),
+            "Crescimento_Receita_YoY": formatar_percentual(rent.get("Crescimento_Receita_YoY")) if not isinstance(rent.get("Crescimento_Receita_YoY"), str) else rent.get("Crescimento_Receita_YoY"),
+            "Crescimento_Lucros_YoY": formatar_percentual(rent.get("Crescimento_Lucros_YoY")) if not isinstance(rent.get("Crescimento_Lucros_YoY"), str) else rent.get("Crescimento_Lucros_YoY"),
+        },
+        "Endividamento_e_Caixa": {
+            "Receita_Total_12m": formatar_moeda_grande(end.get("Receita_Total_12m"), moeda_bal) if not isinstance(end.get("Receita_Total_12m"), str) else end.get("Receita_Total_12m"),
+            "EBITDA": formatar_moeda_grande(end.get("EBITDA"), moeda_bal) if not isinstance(end.get("EBITDA"), str) else end.get("EBITDA"),
+            "Caixa_Total": formatar_moeda_grande(end.get("Caixa_Total"), moeda_bal) if not isinstance(end.get("Caixa_Total"), str) else end.get("Caixa_Total"),
+            "Divida_Total": formatar_moeda_grande(end.get("Divida_Total"), moeda_bal) if not isinstance(end.get("Divida_Total"), str) else end.get("Divida_Total"),
+            "Divida_Liquida": formatar_moeda_grande(end.get("Divida_Liquida"), moeda_bal) if not isinstance(end.get("Divida_Liquida"), str) else end.get("Divida_Liquida"),
+            "Divida_Liquida_sobre_EBITDA": f"{br(alav)}x" if isinstance(alav, (int, float)) else str(alav or "N/D"),
+            "Liquidez_Corrente": br(end.get("Liquidez_Corrente")),
+            "Fluxo_Caixa_Livre": formatar_moeda_grande(end.get("Fluxo_Caixa_Livre"), moeda_bal) if not isinstance(end.get("Fluxo_Caixa_Livre"), str) else end.get("Fluxo_Caixa_Livre"),
+        },
+        "Proventos": {
+            "Dividend_Yield_Real_12m": dy_txt,
+            "Total_Pago_12m_por_Cota": _moeda_txt(prov.get("Total_Pago_12m_por_Cota"), simbolo) if not isinstance(prov.get("Total_Pago_12m_por_Cota"), str) else prov.get("Total_Pago_12m_por_Cota"),
+            "Frequencia_Pagamentos_12m": freq_txt,
+            "Payout_Ratio": formatar_percentual(prov.get("Payout_Ratio")) if not isinstance(prov.get("Payout_Ratio"), str) else prov.get("Payout_Ratio"),
+        },
+    }
+
+
 def gerar_resumo_tecnico_local(dados: dict, motivo_fallback: str = "") -> str:
-    ide = dados["Identificacao"]
-    val = dados["Valuation"]
-    rent = dados["Rentabilidade_e_Eficiencia"]
-    end = dados["Endividamento_e_Caixa"]
-    fluxo = dados["Fluxo_e_Volume"]
-    prov = dados["Proventos"]
-    n = dados["Numeros"]
+    fmt = formatar_para_leitura(dados)
+    ide = fmt["Identificacao"]
+    val = fmt["Valuation"]
+    rent = fmt["Rentabilidade_e_Eficiencia"]
+    end = fmt["Endividamento_e_Caixa"]
+    fluxo = fmt["Fluxo_e_Volume"]
+    prov = fmt["Proventos"]
 
-    preco = n["preco_atual"]
-    graham = n["graham"]
-    bazin = n["bazin"]
+    cot_raw = dados.get("Cotacao_e_Mercado") or {}
+    val_raw = dados.get("Valuation") or {}
+    n = dados.get("Numeros") or {}
 
-    analise_val = f"O ativo **{ide['Ticker']}** negocia a **{dados['Cotacao_e_Mercado']['Preco_Atual']}**, apresentando P/L de **{val['P_L']}** e P/VP de **{val['P_VP']}**. "
-    if graham:
+    preco = numero(cot_raw.get("Preco_Atual")) or numero(n.get("preco_atual"))
+    graham = numero(val_raw.get("Valor_Intrinseco_Graham")) or numero(n.get("graham"))
+    bazin = numero(val_raw.get("Preco_Teto_Bazin_6pct")) or numero(n.get("bazin"))
+
+    analise_val = (
+        f"O ativo **{ide['Ticker']}** negocia a **{fmt['Cotacao_e_Mercado']['Preco_Atual']}**, "
+        f"apresentando P/L de **{val['P_L']}** e P/VP de **{val['P_VP']}**. "
+    )
+    if graham and preco and preco > 0:
         diff_g = ((graham / preco) - 1) * 100
         status_g = f"desconto de {br(diff_g)}%" if diff_g >= 0 else f"prêmio de {br(abs(diff_g))}%"
         analise_val += f"Pela fórmula de Benjamin Graham ({val['Valor_Intrinseco_Graham']}), a cotação opera com **{status_g}**. "
@@ -567,7 +771,7 @@ def gerar_resumo_tecnico_local(dados: dict, motivo_fallback: str = "") -> str:
         f"### 1. Valuation e Precificação\n"
         f"{analise_val}\n\n"
         f"### 2. Fluxo de Volume e Liquidez de Mercado\n"
-        f"No pregão atual, o ativo registra variação de **{dados['Cotacao_e_Mercado']['Variacao_Dia']}** com volume financeiro estimado em "
+        f"No pregão atual, o ativo registra variação de **{fmt['Cotacao_e_Mercado']['Variacao_Dia']}** com volume financeiro estimado em "
         f"**{fluxo['Volume_Financeiro_Dia']}** ({fluxo['Volume_Acoes_Dia']} papéis negociados vs. média de 3 meses de {fluxo['Volume_Medio_3m']}). "
         f"Diagnóstico de fluxo: **{fluxo['Status_Fluxo']}**.\n\n"
         f"### 3. Qualidade Operacional e Documentação Contábil\n"
@@ -580,19 +784,22 @@ def gerar_resumo_tecnico_local(dados: dict, motivo_fallback: str = "") -> str:
     )
 
 
-def gerar_relatorio_ia(dados: dict) -> tuple[str, str]:
+def gerar_relatorio_ia(dados: dict) -> tuple[str, str, bool]:
+    """
+    Gera o diagnóstico fundamentalista e retorna (relatorio_md, modelo_utilizado, veio_da_ia).
+    """
     if client is None:
-        return gerar_resumo_tecnico_local(dados, "Chave de API não configurada"), "Motor Algorítmico Local"
+        return gerar_resumo_tecnico_local(dados, "Chave de API não configurada"), "Motor Algorítmico Local", False
 
-    dados_prompt = {k: v for k, v in dados.items() if k != "Numeros"}
+    dados_prompt = formatar_para_leitura(dados)
 
-    prompt = f"""Você é um analista fundamentalista sênior (CNPI) especializado na B3.
+    prompt = f"""Você é um especialista em análise fundamentalista de ativos listados na B3.
 Analise de forma crítica, técnica e independente os dados abaixo, extraídos da B3/Yahoo Finance.
-Interprete os indicadores conjuntamente (Valuation, Fluxo de Volume de Entrada/Saída, Balanço e Proventos).
+Interprete os indicadores conjuntamente (Valuation, Fluxo de Volume, Balanço e Proventos).
 
 REGRAS:
 1. Use somente os dados fornecidos. Não invente números ou eventos.
-2. Analise também o Fluxo de Volume (se há pressão compradora/vendedora e liquidez nos últimos pregões).
+2. Analise também o Fluxo de Volume e a liquidez nos últimos pregões.
 3. Para FII, priorize P/VP, Dividend Yield, liquidez e consistência dos rendimentos.
 4. Responda em português do Brasil, em Markdown, usando exatamente os 4 títulos '###' abaixo (máximo 450 palavras).
 5. Encerre lembrando que não é recomendação formal de compra ou venda.
@@ -610,8 +817,8 @@ ESTRUTURA OBRIGATÓRIA:
         resposta = client.models.generate_content(model=MODELO_GEMINI, contents=prompt)
         texto = (getattr(resposta, "text", None) or "").strip()
         if not texto:
-            return gerar_resumo_tecnico_local(dados, "Resposta vazia da API"), "Motor Algorítmico Local"
-        return texto, MODELO_GEMINI
+            return gerar_resumo_tecnico_local(dados, "Resposta vazia da API"), "Motor Algorítmico Local", False
+        return texto, MODELO_GEMINI, True
     except Exception as e:
         msg_erro = str(e)
         if "429" in msg_erro or "quota" in msg_erro.lower():
@@ -620,4 +827,4 @@ ESTRUTURA OBRIGATÓRIA:
             erro_curto = f"Modelo '{MODELO_GEMINI}' inválido no .env"
         else:
             erro_curto = type(e).__name__
-        return gerar_resumo_tecnico_local(dados, erro_curto), f"Motor Algorítmico ({erro_curto})"
+        return gerar_resumo_tecnico_local(dados, erro_curto), f"Motor Algorítmico ({erro_curto})", False
