@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ dados.Identificacao.Ticker }} — Raio-X Fundamentalista | Investidor IA{% endblock %}
+{% block title %}{{ dados.Identificacao.Ticker }} — Dossiê Didático & Raio-X | Investidor IA{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -55,12 +55,6 @@
     height: 100%;
     border-radius: 4px;
   }
-  .margem-preenchimento.pos {
-    background: var(--pos);
-  }
-  .margem-preenchimento.neg {
-    background: var(--neg);
-  }
   .faixa-barra {
     position: relative;
     height: 8px;
@@ -108,6 +102,207 @@
     padding-left: 12px;
     color: var(--suave);
   }
+  .dossie-bloco {
+    background: var(--card);
+    border: 1px solid var(--borda);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+  }
+  .dossie-header {
+    margin-bottom: 1.25rem;
+  }
+  .dossie-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-bottom: 1.25rem;
+  }
+  .dossie-item {
+    background: rgba(7, 11, 18, 0.55);
+    border: 1px solid var(--borda);
+    border-radius: 10px;
+    padding: 1.1rem;
+  }
+  .dossie-destaque-box {
+    background: rgba(56, 189, 248, 0.06);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    color: var(--suave);
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+  .simulador-controles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(7, 11, 18, 0.6);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+  }
+  .simulador-grupo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .simulador-btn {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 1px solid var(--borda);
+    background: var(--card);
+    color: var(--texto);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .simulador-btn-ativo {
+    background: var(--destaque);
+    color: #070b12;
+    border-color: var(--destaque);
+    font-weight: 700;
+  }
+  .simulador-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-bottom: 1.25rem;
+  }
+  .sim-card {
+    background: rgba(7, 11, 18, 0.55);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 1.15rem;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .sim-card-acao {
+    border-color: rgba(52, 211, 153, 0.4);
+    background: rgba(52, 211, 153, 0.05);
+  }
+  .sim-card-guru {
+    border-color: rgba(251, 113, 133, 0.4);
+    background: rgba(251, 113, 133, 0.05);
+  }
+  .sim-veredito {
+    background: rgba(251, 113, 133, 0.08);
+    border: 1px solid rgba(251, 113, 133, 0.35);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    color: #fecaca;
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+  .bloco-pro-container {
+    position: relative;
+    margin-bottom: 1.5rem;
+  }
+  .bloqueado-pro {
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .conteudo-borrado {
+    filter: blur(8px);
+    -webkit-filter: blur(8px);
+    user-select: none;
+    pointer-events: none;
+    opacity: 0.38;
+    transition: filter 0.3s ease;
+  }
+  .paywall-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, rgba(7, 11, 18, 0.72) 0%, rgba(7, 11, 18, 0.92) 100%);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    padding: 1.5rem;
+  }
+  .paywall-card-cta {
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8), 0 0 25px rgba(56, 189, 248, 0.15);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 520px;
+    text-align: center;
+  }
+  .paywall-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--destaque);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+  }
+  .paywall-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 1.25rem 0 0.75rem;
+  }
+  .macro-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 1rem;
+  }
+  .cenarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    margin-bottom: 1.5rem;
+  }
+  .cenario-card {
+    background: rgba(7, 11, 18, 0.6);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+  .cenario-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--borda);
+  }
+  .traducao-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+    margin-top: 1rem;
+  }
+  .traducao-card {
+    background: rgba(7, 11, 18, 0.6);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+  .traducao-linha {
+    margin-top: 0.75rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.85rem;
+    color: var(--suave);
+    line-height: 1.5;
+  }
 </style>
 {% endblock %}
 
@@ -121,12 +316,23 @@
 {% set margem_graham = dados.Valuation.get('Margem_Graham_Pct') %}
 {% set margem_bazin = dados.Valuation.get('Margem_Bazin_Pct') %}
 {% set site_oficial = dados.Identificacao.get('Site_Oficial') %}
+{% set dossie = bloco1 or dados.get('Dossie_Didatico') or {} %}
+{% set sim = bloco2 or dados.get('Simulador_Realidade') or {} %}
+{% set b3_dados = bloco3 or {} %}
+{% set pares_rivais = b3_dados.get('pares') or dados.get('Pares_Setoriais') or [] %}
+{% set macro = b3_dados.get('macro') or dados.get('Termometro_Macro') or {} %}
+{% set b4_dados = bloco4 or {} %}
+{% set cenarios = b4_dados.get('cenarios') or dados.get('Cenarios_Projetados') or {} %}
+{% set mult_trad = b4_dados.get('multiplos_traduzidos') or dados.get('Multiplos_Traduzidos') or {} %}
 
 <div class="topo-ativo">
   <div>
     <h2 style="margin:0 0 4px; font-size:1.75rem;">
       {{ dados.Identificacao.Ticker }}
       <span class="badge badge-destaque">{{ dados.Identificacao.Tipo_Ativo }}</span>
+      {% if eh_pro %}
+      <span class="badge badge-pos">👑 Membro Pro</span>
+      {% endif %}
     </h2>
     <div style="color:var(--suave); font-size:.92rem;">
       {{ dados.Identificacao.Nome_Empresa }} • Setor: {{ dados.Identificacao.Setor }} ({{ dados.Identificacao.Industria }})
@@ -167,62 +373,445 @@
   {% endif %}
 </div>
 
-<div class="secao-titulo">📈 Monitor de Liquidez & Fluxo de Volume</div>
-<div class="cards-grid">
-  <div class="card">
-    <div class="title">Volume Financeiro (Dia)</div>
-    <div class="value">{{ dados.Fluxo_e_Volume.Volume_Financeiro_Dia | moeda_grande_br(moeda_cot) }}</div>
-    <div class="detail">{{ dados.Fluxo_e_Volume.Status_Fluxo }}</div>
-  </div>
-  <div class="card">
-    <div class="title">Papéis Negociados</div>
-    <div class="value">{{ dados.Fluxo_e_Volume.Volume_Acoes_Dia | inteiro_br }}</div>
-    <div class="detail">Média 10d: {{ dados.Fluxo_e_Volume.Volume_Medio_10d | inteiro_br }}</div>
-  </div>
-  <div class="card">
-    <div class="title">Média de Volume (3m)</div>
-    <div class="value">{{ dados.Fluxo_e_Volume.Volume_Medio_3m | inteiro_br }}</div>
-    <div class="detail">Beta: {{ dados.Fluxo_e_Volume.Beta_Volatilidade | numero_br(2) }}</div>
-  </div>
-  <div class="card">
-    <div class="title">Banda do Dia</div>
-    <div class="value" style="font-size:1.1rem;">
-      {{ dados.Cotacao_e_Mercado.Minima_Dia | moeda_br(simbolo) }} - {{ dados.Cotacao_e_Mercado.Maxima_Dia | moeda_br(simbolo) }}
+<!-- ======================================================================= -->
+<!-- BLOCO 1 (Dossiê Aberto): O Que a Empresa Faz e Como Ganha Dinheiro      -->
+<!-- ======================================================================= -->
+<div class="dossie-bloco">
+  <div class="dossie-header">
+    <span class="badge badge-destaque">Bloco 1 • Dossiê Aberto do Professor da B3</span>
+    <h3 style="margin:8px 0 4px; font-size:1.35rem; color:var(--texto);">
+      🏢 O Que a Empresa Faz e Como Ganha Dinheiro
+    </h3>
+    <div style="color:var(--suave); font-size:0.88rem;">
+      Entenda em linguagem simples o modelo de negócios, quem controla e onde ela entra no seu dia a dia.
     </div>
-    <div class="detail">Abertura: {{ dados.Cotacao_e_Mercado.Abertura_Dia | moeda_br(simbolo) }}</div>
+  </div>
+
+  <div class="dossie-grid-4">
+    <div class="dossie-item">
+      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--destaque); font-weight:700; margin-bottom:6px;">
+        🛒 O Que Vende na Rua
+      </div>
+      <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
+        {{ dossie.o_que_faz or "Comercializa produtos e soluções essenciais em seu mercado de atuação." }}
+      </div>
+    </div>
+    <div class="dossie-item">
+      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--destaque); font-weight:700; margin-bottom:6px;">
+        👥 Para Quem Vende
+      </div>
+      <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
+        {{ dossie.para_quem_vende or "Consumidores finais e clientes corporativos de grande escala." }}
+      </div>
+    </div>
+    <div class="dossie-item">
+      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--pos); font-weight:700; margin-bottom:6px;">
+        💰 Como a Grana Entra
+      </div>
+      <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
+        {{ dossie.como_ganha_dinheiro or "Através da margem operacional entre custos de produção e preços de venda praticados." }}
+      </div>
+    </div>
+    <div class="dossie-item">
+      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--destaque); font-weight:700; margin-bottom:6px;">
+        🏛️ Quem Manda (Controle)
+      </div>
+      <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
+        {{ dossie.estrutura_controle or "Estrutura societária registrada com governança corporativa na B3." }}
+      </div>
+      {% if dossie.tipo_controle %}
+      <div style="margin-top:6px;">
+        <span class="badge">{{ dossie.tipo_controle }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="dossie-destaque-box">
+    <strong style="color:var(--destaque);">🌱 Na sua vida real:</strong>
+    {{ dossie.contexto_vida_real or "Esta empresa faz parte da engrenagem do cotidiano nacional brasileiro." }}
+    {% if dossie.marcas_cotidiano %}
+    <div style="margin-top:6px; font-size:0.86rem; color:var(--apagado);">
+      <strong style="color:var(--suave);">Marcas e Produtos:</strong> {{ dossie.marcas_cotidiano }}
+    </div>
+    {% endif %}
   </div>
 </div>
 
-<div class="painel">
-  <h3>📊 Histórico de Volume nos Últimos 5 Pregões</h3>
-  <div style="overflow-x:auto;">
-    <table class="tabela">
-      <thead>
-        <tr>
-          <th>Data</th><th>Fechamento</th><th>Variação</th>
-          <th>Qtd. Negociada</th><th>Volume Financeiro</th><th>Comportamento no Dia</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in dados.Fluxo_e_Volume.Pregoes_Recentes %}
-        <tr>
-          <td>{{ p.data }}</td>
-          <td><strong>{{ p.fechamento | moeda_br(simbolo) }}</strong></td>
-          <td class="{{ 'pos' if p.variacao_pct >= 0 else 'neg' }}">
-            {{ '+' if p.variacao_pct >= 0 else '' }}{{ p.variacao_pct | numero_br(2) }}%
-          </td>
-          <td>{{ p.volume_acoes | inteiro_br }}</td>
-          <td>{{ p.volume_financeiro | moeda_grande_br(moeda_cot) }}</td>
-          <td><strong class="{{ 'pos' if p.variacao_pct > 0.15 else ('neg' if p.variacao_pct < -0.15 else '') }}">{{ p.fluxo }}</strong></td>
-        </tr>
-        {% else %}
-        <tr><td colspan="6">Histórico diário indisponível no momento.</td></tr>
+<!-- ======================================================================= -->
+<!-- BLOCO 2 (Dossiê Aberto): Simulador Realidade vs. Guru (Anti-Ilusão)     -->
+<!-- ======================================================================= -->
+<div class="dossie-bloco">
+  <div class="dossie-header">
+    <span class="badge badge-pos">Bloco 2 • Simulador Realidade vs. Guru</span>
+    <h3 style="margin:8px 0 4px; font-size:1.35rem; color:var(--texto);">
+      🧮 Simulador Realidade vs. Guru (Detector de Ilusões)
+    </h3>
+    <div style="color:var(--suave); font-size:0.88rem;">
+      Confronte os proventos factuais e valorização histórica de {{ dados.Identificacao.Ticker }} contra Poupança, CDI e promessas irreais da internet.
+    </div>
+  </div>
+
+  <div class="simulador-controles">
+    <div class="simulador-grupo">
+      <span style="font-size:0.84rem; color:var(--suave); font-weight:600;">💵 Aporte Inicial:</span>
+      <button type="button" class="simulador-btn" onclick="atualizarSimulador(1000, null)" data-aporte="1000">R$ 1.000</button>
+      <button type="button" class="simulador-btn simulador-btn-ativo" onclick="atualizarSimulador(5000, null)" data-aporte="5000">R$ 5.000</button>
+      <button type="button" class="simulador-btn" onclick="atualizarSimulador(10000, null)" data-aporte="10000">R$ 10.000</button>
+    </div>
+    <div class="simulador-grupo">
+      <span style="font-size:0.84rem; color:var(--suave); font-weight:600;">⏳ Prazo:</span>
+      <button type="button" class="simulador-btn" onclick="atualizarSimulador(null, '1y')" data-prazo="1y">1 Ano</button>
+      <button type="button" class="simulador-btn simulador-btn-ativo" onclick="atualizarSimulador(null, '2y')" data-prazo="2y">2 Anos</button>
+      <button type="button" class="simulador-btn" onclick="atualizarSimulador(null, '5y')" data-prazo="5y">5 Anos</button>
+    </div>
+  </div>
+
+  <div class="simulador-grid">
+    <div class="sim-card sim-card-acao">
+      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--pos); font-weight:700;">
+        📈 Ação Real ({{ dados.Identificacao.Ticker }})
+      </div>
+      <div id="sim-acao-total" style="font-size:1.6rem; font-weight:800; color:var(--pos); margin:6px 0;">
+        R$ 0,00
+      </div>
+      <div style="margin-bottom:6px;">
+        <span id="sim-acao-rent" class="badge badge-pos">+0,00%</span>
+      </div>
+      <div id="sim-acao-detalhe" style="font-size:0.78rem; color:var(--suave);">
+        Proventos: R$ 0,00 • Cotação: R$ 0,00
+      </div>
+    </div>
+
+    <div class="sim-card">
+      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--destaque); font-weight:700;">
+        🏦 CDI Líquido (10,5% a.a.)
+      </div>
+      <div id="sim-cdi-total" style="font-size:1.6rem; font-weight:800; color:var(--texto); margin:6px 0;">
+        R$ 0,00
+      </div>
+      <div style="margin-bottom:6px;">
+        <span id="sim-cdi-rent" class="badge badge-destaque">+0,00%</span>
+      </div>
+      <div style="font-size:0.78rem; color:var(--apagado);">
+        Renda fixa com IR regressivo deduzido
+      </div>
+    </div>
+
+    <div class="sim-card">
+      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--suave); font-weight:700;">
+        🐷 Caderneta de Poupança
+      </div>
+      <div id="sim-poup-total" style="font-size:1.6rem; font-weight:800; color:var(--texto); margin:6px 0;">
+        R$ 0,00
+      </div>
+      <div style="margin-bottom:6px;">
+        <span id="sim-poup-rent" class="badge">+0,00%</span>
+      </div>
+      <div style="font-size:0.78rem; color:var(--apagado);">
+        Rendimento histórico isento de IR (6,5% a.a.)
+      </div>
+    </div>
+
+    <div class="sim-card sim-card-guru">
+      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--neg); font-weight:700;">
+        🚨 Mito do Guru ("5% a.m.")
+      </div>
+      <div id="sim-guru-total" style="font-size:1.6rem; font-weight:800; color:var(--neg); margin:6px 0;">
+        R$ 0,00
+      </div>
+      <div style="margin-bottom:6px;">
+        <span id="sim-guru-rent" class="badge badge-neg">+0,00%</span>
+        <span class="badge badge-neg">ILUSÃO</span>
+      </div>
+      <div style="font-size:0.78rem; color:var(--apagado);">
+        Promessa matemática irreal de pirâmide/day trade
+      </div>
+    </div>
+  </div>
+
+  <div class="sim-veredito">
+    <strong style="color:#fecaca;">🚨 Veredito Anti-Guru do Professor da B3:</strong><br>
+    {{ sim.veredito_anti_guru or "Se a promessa de 5% ao mês fosse verdadeira, R$ 5.000 se tornariam R$ 93.395 em 5 anos e R$ 1,7 milhão em 10 anos! No mundo real, a riqueza sustentável vem de empresas reais que lucram e pagam proventos factuais auditados." }}
+  </div>
+</div>
+
+<!-- ======================================================================= -->
+<!-- GATEWAY FREEMIUM: BLOCOS 3 E 4 (PROTEGIDOS POR PAYWALL)                 -->
+<!-- ======================================================================= -->
+<div class="bloco-pro-container {% if not eh_pro %}bloqueado-pro{% endif %}">
+  {% if not eh_pro %}
+  <div class="paywall-overlay">
+    <div class="paywall-card-cta">
+      <div class="paywall-badge">👑 Camada Pro Exclusiva</div>
+      <h3 style="margin:0 0 8px; font-size:1.35rem; color:var(--texto);">
+        Desbloqueie o Raio-X Setorial e as Projeções de 1 a 5 Anos
+      </h3>
+      <p style="color:var(--suave); font-size:0.9rem; line-height:1.55; margin:0 0 12px;">
+        Acesse a comparação lado a lado com os 2 a 3 maiores rivais da B3, o termômetro macroeconômico e os 3 cenários matemáticos preditivos da IA.
+      </p>
+      <div class="paywall-buttons">
+        <a href="/cadastro" class="btn btn-destaque">
+          ⚡ Desbloquear Versão Pro
+        </a>
+        <a href="/login" class="btn btn-sec">
+          Já sou Pro (Entrar)
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="{% if not eh_pro %}conteudo-borrado{% endif %}">
+    <!-- =================================================================== -->
+    <!-- BLOCO 3 (Camada Pro): Raio-X dos Rivais B3 & Termômetro Macro       -->
+    <!-- =================================================================== -->
+    <div class="dossie-bloco">
+      <div class="dossie-header">
+        <span class="badge badge-destaque">Bloco 3 • Camada Pro • Comparativo Setorial</span>
+        <h3 style="margin:8px 0 4px; font-size:1.35rem; color:var(--texto);">
+          ⚔️ Raio-X dos Rivais Diretos na B3 & Forças Macroeconômicas
+        </h3>
+        <div style="color:var(--suave); font-size:0.88rem;">
+          Compare os múltiplos e a eficiência operacional de {{ dados.Identificacao.Ticker }} com seus maiores concorrentes na Bolsa.
+        </div>
+      </div>
+
+      <div style="overflow-x:auto; margin-bottom:1.5rem;">
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Ativo</th>
+              <th>Nome da Empresa</th>
+              <th>Cotação</th>
+              <th>P/L</th>
+              <th>P/VP</th>
+              <th>Dividend Yield</th>
+              <th>ROE</th>
+              <th>Margem Líquida</th>
+              <th>Dív. Líq / EBITDA</th>
+              <th>Veredito Estratégico</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:rgba(56,189,248,0.06);">
+              <td><strong>{{ dados.Identificacao.Ticker }}</strong></td>
+              <td>{{ dados.Identificacao.Nome_Empresa }}</td>
+              <td><strong>{{ dados.Cotacao_e_Mercado.Preco_Atual | moeda_br(simbolo) }}</strong></td>
+              <td>{{ dados.Valuation.P_L | numero_br(2) }}</td>
+              <td>{{ dados.Valuation.P_VP | numero_br(2) }}</td>
+              <td class="pos">{{ dados.Proventos.Dividend_Yield_Real_12m | percentual_br }}</td>
+              <td>{{ dados.Rentabilidade_e_Eficiencia.ROE | percentual_br }}</td>
+              <td>{{ dados.Rentabilidade_e_Eficiencia.Margem_Liquida | percentual_br }}</td>
+              <td>
+                {% if dados.Endividamento_e_Caixa.Divida_Liquida_sobre_EBITDA is not none %}
+                  {{ dados.Endividamento_e_Caixa.Divida_Liquida_sobre_EBITDA | numero_br(2) }}x
+                {% else %}
+                  N/D
+                {% endif %}
+              </td>
+              <td><span class="badge badge-destaque">Ativo em Análise</span></td>
+            </tr>
+            {% for rival in pares_rivais %}
+            <tr>
+              <td><strong><a class="destaque" href="/analisar?ticker={{ rival.ticker }}">{{ rival.ticker }}</a></strong></td>
+              <td>{{ rival.nome }}</td>
+              <td>{{ rival.preco | moeda_br('R$') }}</td>
+              <td>{{ rival.p_l | numero_br(2) if rival.p_l else 'N/D' }}</td>
+              <td>{{ rival.p_vp | numero_br(2) if rival.p_vp else 'N/D' }}</td>
+              <td class="pos">{{ (rival.dy / 100.0) | percentual_br if rival.dy is not none else 'N/D' }}</td>
+              <td>{{ (rival.roe / 100.0) | percentual_br if rival.roe is not none else 'N/D' }}</td>
+              <td>{{ (rival.margem_liquida / 100.0) | percentual_br if rival.margem_liquida is not none else 'N/D' }}</td>
+              <td>{{ rival.divida_ebitda | numero_br(2) }}x{% if not rival.divida_ebitda %}N/D{% endif %}</td>
+              <td><span class="badge">{{ rival.destaque }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="secao-titulo">🌡️ Termômetro de Sensibilidade Macroeconômica</div>
+      <div class="macro-grid">
+        {% set macro_itens = [
+          ('Selic (Juros)', macro.get('selic') or macro.get('SELIC') or {}),
+          ('Inflação (IPCA)', macro.get('ipca') or macro.get('IPCA') or {}),
+          ('Câmbio (USD/BRL)', macro.get('cambio') or macro.get('CAMBIO') or {}),
+          ('Commodities', macro.get('commodities') or macro.get('COMMODITIES') or {}),
+          ('Risco Brasil', macro.get('risco_brasil') or macro.get('RISCO_BRASIL') or {})
+        ] %}
+        {% for nome_macro, item_macro in macro_itens %}
+        <div class="dossie-item">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <strong style="font-size:0.85rem; color:var(--texto);">{{ nome_macro }}</strong>
+            {% if item_macro.direcao == 'Positiva' %}
+            <span class="badge badge-pos">
+            {% elif item_macro.direcao == 'Negativa' %}
+            <span class="badge badge-neg">
+            {% else %}
+            <span class="badge">
+            {% endif %}
+              {{ item_macro.sensibilidade or 'Média' }}
+            </span>
+          </div>
+          <div style="font-size:0.8rem; color:var(--suave); line-height:1.45;">
+            {{ item_macro.impacto or 'Sensibilidade moderada de acordo com as condições de mercado.' }}
+          </div>
+        </div>
         {% endfor %}
-      </tbody>
-    </table>
+      </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- BLOCO 4 (Camada Pro): Cálculos Densos & Cenários da IA (1 a 5 anos) -->
+    <!-- =================================================================== -->
+    <div class="dossie-bloco">
+      <div class="dossie-header">
+        <span class="badge badge-pos">Bloco 4 • Camada Pro • Modelagem Preditiva</span>
+        <h3 style="margin:8px 0 4px; font-size:1.35rem; color:var(--texto);">
+          🤖 Projeções Matemáticas da IA em 3 Cenários (1 a 5 Anos)
+        </h3>
+        <div style="color:var(--suave); font-size:0.88rem;">
+          Simulações preditivas baseadas na projeção de lucros (LPA), múltiplos terminais e fluxo composto de proventos.
+        </div>
+      </div>
+
+      <div class="cenarios-grid">
+        <!-- Cenário Pessimista -->
+        {% set c_pess = cenarios.get('pessimista') or cenarios.get('Pessimista') or {} %}
+        {% set ret_pess_1 = c_pess.get('1_ano', {}).get('retorno_total_pct') or 0 %}
+        {% set ret_pess_5 = c_pess.get('5_anos', {}).get('retorno_total_pct') or 0 %}
+        <div class="cenario-card">
+          <div class="cenario-header">
+            <strong style="color:var(--neg);">🌧️ Cenário Pessimista</strong>
+            <span class="badge badge-neg">Desaceleração</span>
+          </div>
+          <div style="font-size:0.85rem; color:var(--suave); margin-bottom:10px;">
+            {{ c_pess.get('1_ano', {}).get('premissas') or 'Compressão de margens e desaceleração cíclica do setor.' }}
+          </div>
+          <div style="border-top:1px solid var(--borda); padding-top:8px; margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+              <span>Preço Alvo (1 ano):</span>
+              <strong>{{ c_pess.get('1_ano', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
+              <span>Retorno Total (1 ano):</span>
+              <strong class="{{ 'pos' if ret_pess_1 >= 0 else 'neg' }}">
+                {{ ret_pess_1 | numero_br(2) }}%
+              </strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:8px; border-top:1px dashed var(--borda); padding-top:6px;">
+              <span>Preço Alvo (5 anos):</span>
+              <strong>{{ c_pess.get('5_anos', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
+              <span>Retorno Total (5 anos):</span>
+              <strong class="{{ 'pos' if ret_pess_5 >= 0 else 'neg' }}">
+                {{ ret_pess_5 | numero_br(2) }}%
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cenário Realista -->
+        {% set c_real = cenarios.get('realista') or cenarios.get('Realista') or {} %}
+        {% set ret_real_1 = c_real.get('1_ano', {}).get('retorno_total_pct') or 0 %}
+        {% set ret_real_5 = c_real.get('5_anos', {}).get('retorno_total_pct') or 0 %}
+        <div class="cenario-card" style="border-color:rgba(56,189,248,0.4);">
+          <div class="cenario-header">
+            <strong style="color:var(--destaque);">⚖️ Cenário Realista</strong>
+            <span class="badge badge-destaque">Caso Base</span>
+          </div>
+          <div style="font-size:0.85rem; color:var(--suave); margin-bottom:10px;">
+            {{ c_real.get('1_ano', {}).get('premissas') or 'Continuidade das operações recentes e crescimento sustentável.' }}
+          </div>
+          <div style="border-top:1px solid var(--borda); padding-top:8px; margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+              <span>Preço Alvo (1 ano):</span>
+              <strong>{{ c_real.get('1_ano', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
+              <span>Retorno Total (1 ano):</span>
+              <strong class="{{ 'pos' if ret_real_1 >= 0 else 'neg' }}">
+                {{ ret_real_1 | numero_br(2) }}%
+              </strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:8px; border-top:1px dashed var(--borda); padding-top:6px;">
+              <span>Preço Alvo (5 anos):</span>
+              <strong>{{ c_real.get('5_anos', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
+              <span>Retorno Total (5 anos):</span>
+              <strong class="{{ 'pos' if ret_real_5 >= 0 else 'neg' }}">
+                {{ ret_real_5 | numero_br(2) }}%
+              </strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cenário Otimista -->
+        {% set c_otim = cenarios.get('otimista') or cenarios.get('Otimista') or {} %}
+        {% set ret_otim_1 = c_otim.get('1_ano', {}).get('retorno_total_pct') or 0 %}
+        {% set ret_otim_5 = c_otim.get('5_anos', {}).get('retorno_total_pct') or 0 %}
+        <div class="cenario-card">
+          <div class="cenario-header">
+            <strong style="color:var(--pos);">🚀 Cenário Otimista</strong>
+            <span class="badge badge-pos">Expansão</span>
+          </div>
+          <div style="font-size:0.85rem; color:var(--suave); margin-bottom:10px;">
+            {{ c_otim.get('1_ano', {}).get('premissas') or 'Ganhos de eficiência e reclassificação de múltiplos pelo mercado.' }}
+          </div>
+          <div style="border-top:1px solid var(--borda); padding-top:8px; margin-top:8px;">
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+              <span>Preço Alvo (1 ano):</span>
+              <strong>{{ c_otim.get('1_ano', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
+              <span>Retorno Total (1 ano):</span>
+              <strong class="{{ 'pos' if ret_otim_1 >= 0 else 'neg' }}">
+                {{ ret_otim_1 | numero_br(2) }}%
+              </strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:8px; border-top:1px dashed var(--borda); padding-top:6px;">
+              <span>Preço Alvo (5 anos):</span>
+              <strong>{{ c_otim.get('5_anos', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
+              <span>Retorno Total (5 anos):</span>
+              <strong class="{{ 'pos' if ret_otim_5 >= 0 else 'neg' }}">
+                {{ ret_otim_5 | numero_br(2) }}%
+              </strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tradução Absoluta dos Múltiplos (Regra R1) -->
+      <div class="secao-titulo">📖 Tradução Absoluta dos Múltiplos (Regra R1 — Zero Economês Isolado)</div>
+      <div class="traducao-grid">
+        {% for chave_m, item_m in mult_trad.items() %}
+        <div class="traducao-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <strong style="color:var(--destaque); font-size:0.92rem;">{{ item_m.nome }}</strong>
+            <span class="badge {{ 'badge-pos' if item_m.classe_css == 'pos' else ('badge-neg' if item_m.classe_css == 'neg' else '') }}">
+              {{ item_m.situacao }}
+            </span>
+          </div>
+          <div style="font-size:0.85rem; color:var(--texto); line-height:1.5;">
+            <strong>Analogia:</strong> {{ item_m.analogia }}
+          </div>
+          <div class="traducao-linha">
+            <strong style="color:var(--pos);">💼 Impacto no seu bolso:</strong> {{ item_m.impacto_bolso }}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
   </div>
 </div>
 
+<!-- ======================================================================= -->
+<!-- SEÇÕES DE FUNDAMENTOS CLÁSSICOS & VALUATION PRESERVADAS                 -->
+<!-- ======================================================================= -->
 <div class="secao-titulo">📐 Múltiplos de Valuation & Preços de Referência</div>
 <div class="cards-grid">
   <div class="card">
@@ -309,6 +898,62 @@
 </div>
 {% endif %}
 
+<div class="secao-titulo">📈 Monitor de Liquidez & Fluxo de Volume</div>
+<div class="cards-grid">
+  <div class="card">
+    <div class="title">Volume Financeiro (Dia)</div>
+    <div class="value">{{ dados.Fluxo_e_Volume.Volume_Financeiro_Dia | moeda_grande_br(moeda_cot) }}</div>
+    <div class="detail">{{ dados.Fluxo_e_Volume.Status_Fluxo }}</div>
+  </div>
+  <div class="card">
+    <div class="title">Papéis Negociados</div>
+    <div class="value">{{ dados.Fluxo_e_Volume.Volume_Acoes_Dia | inteiro_br }}</div>
+    <div class="detail">Média 10d: {{ dados.Fluxo_e_Volume.Volume_Medio_10d | inteiro_br }}</div>
+  </div>
+  <div class="card">
+    <div class="title">Média de Volume (3m)</div>
+    <div class="value">{{ dados.Fluxo_e_Volume.Volume_Medio_3m | inteiro_br }}</div>
+    <div class="detail">Beta: {{ dados.Fluxo_e_Volume.Beta_Volatilidade | numero_br(2) }}</div>
+  </div>
+  <div class="card">
+    <div class="title">Banda do Dia</div>
+    <div class="value" style="font-size:1.1rem;">
+      {{ dados.Cotacao_e_Mercado.Minima_Dia | moeda_br(simbolo) }} - {{ dados.Cotacao_e_Mercado.Maxima_Dia | moeda_br(simbolo) }}
+    </div>
+    <div class="detail">Abertura: {{ dados.Cotacao_e_Mercado.Abertura_Dia | moeda_br(simbolo) }}</div>
+  </div>
+</div>
+
+<div class="painel">
+  <h3>📊 Histórico de Volume nos Últimos 5 Pregões</h3>
+  <div style="overflow-x:auto;">
+    <table class="tabela">
+      <thead>
+        <tr>
+          <th>Data</th><th>Fechamento</th><th>Variação</th>
+          <th>Qtd. Negociada</th><th>Volume Financeiro</th><th>Comportamento no Dia</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in dados.Fluxo_e_Volume.Pregoes_Recentes %}
+        <tr>
+          <td>{{ p.data }}</td>
+          <td><strong>{{ p.fechamento | moeda_br(simbolo) }}</strong></td>
+          <td class="{{ 'pos' if p.variacao_pct >= 0 else 'neg' }}">
+            {{ '+' if p.variacao_pct >= 0 else '' }}{{ p.variacao_pct | numero_br(2) }}%
+          </td>
+          <td>{{ p.volume_acoes | inteiro_br }}</td>
+          <td>{{ p.volume_financeiro | moeda_grande_br(moeda_cot) }}</td>
+          <td><strong class="{{ 'pos' if p.variacao_pct > 0.15 else ('neg' if p.variacao_pct < -0.15 else '') }}">{{ p.fluxo }}</strong></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6">Histórico diário indisponível no momento.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <div class="secao-titulo">📑 Documentação Contábil (Balanço Patrimonial & Eficiência)</div>
 <div class="grid-duplo">
   <div class="painel" style="margin-bottom:0;">
@@ -351,7 +996,7 @@
   </div>
 </div>
 
-<div class="report-box">
+<div class="report-box" style="margin-top:1.5rem;">
   <h3 style="color:var(--destaque); margin-top:0;">🤖 Diagnóstico Fundamentalista & Análise de Fluxo ({{ motor }})</h3>
   <div class="report-content">
     {{ relatorio_html | safe }}
@@ -364,4 +1009,63 @@
     </div>
   </div>
 </div>
+
+<script>
+  const DADOS_SIMULADOR = {{ (sim.matriz or {}) | tojson }};
+  let aporteAtual = 5000;
+  let prazoAtual = '2y';
+
+  function formatarMoeda(val) {
+    if (val === null || val === undefined || isNaN(val)) return 'R$ 0,00';
+    return Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  }
+
+  function formatarPct(val) {
+    if (val === null || val === undefined || isNaN(val)) return '+0,00%';
+    const sinal = val >= 0 ? '+' : '';
+    return sinal + Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '%';
+  }
+
+  function atualizarSimulador(novoAporte, novoPrazo) {
+    if (novoAporte !== null && novoAporte !== undefined) {
+      aporteAtual = novoAporte;
+      document.querySelectorAll('[data-aporte]').forEach(btn => {
+        btn.classList.toggle('simulador-btn-ativo', btn.getAttribute('data-aporte') === String(novoAporte));
+      });
+    }
+    if (novoPrazo !== null && novoPrazo !== undefined) {
+      prazoAtual = novoPrazo;
+      document.querySelectorAll('[data-prazo]').forEach(btn => {
+        btn.classList.toggle('simulador-btn-ativo', btn.getAttribute('data-prazo') === String(novoPrazo));
+      });
+    }
+
+    const dadosAporte = DADOS_SIMULADOR[String(aporteAtual)] || DADOS_SIMULADOR[aporteAtual] || {};
+    const dadosPrazo = dadosAporte[prazoAtual] || {};
+
+    const acao = dadosPrazo.acao || { total: 0, rent_pct: 0, dividendos: 0, patrimonio: 0 };
+    const cdi = dadosPrazo.cdi || { total: 0, rent_pct: 0 };
+    const poup = dadosPrazo.poupanca || { total: 0, rent_pct: 0 };
+    const guru = dadosPrazo.guru || { total: 0, rent_pct: 0 };
+
+    document.getElementById('sim-acao-total').textContent = formatarMoeda(acao.total);
+    document.getElementById('sim-acao-rent').textContent = formatarPct(acao.rent_pct);
+    document.getElementById('sim-acao-detalhe').textContent =
+      'Proventos: ' + formatarMoeda(acao.dividendos) + ' • Cotação: ' + formatarMoeda(acao.patrimonio);
+
+    document.getElementById('sim-cdi-total').textContent = formatarMoeda(cdi.total);
+    document.getElementById('sim-cdi-rent').textContent = formatarPct(cdi.rent_pct);
+
+    document.getElementById('sim-poup-total').textContent = formatarMoeda(poup.total);
+    document.getElementById('sim-poup-rent').textContent = formatarPct(poup.rent_pct);
+
+    document.getElementById('sim-guru-total').textContent = formatarMoeda(guru.total);
+    document.getElementById('sim-guru-rent').textContent = formatarPct(guru.rent_pct);
+  }
+
+  // Inicializa o simulador na carga
+  document.addEventListener('DOMContentLoaded', function() {
+    atualizarSimulador(5000, '2y');
+  });
+</script>
 {% endblock %}

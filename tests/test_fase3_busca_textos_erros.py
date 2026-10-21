@@ -187,3 +187,40 @@ def test_3_5_3_6_3_7_textos_regulatorios_fluxo_e_lgpd(client, monkeypatch):
     assert "endereço IP" in html_legal
     assert "90 dias" in html_legal
     assert "[E-MAIL DE CONTATO]" in html_legal
+
+
+def test_3_8_busca_marcas_cotidiano_e_cooperativas(client):
+    # 1. Resolução de marcas populares do cotidiano
+    assert svc.resolver_ticker("Magalu") == "MGLU3"
+    assert svc.resolver_ticker("Posto Ipiranga") == "UGPA3"
+    assert svc.resolver_ticker("Ipiranga") == "UGPA3"
+    assert svc.resolver_ticker("Banco do Brasil") == "BBAS3"
+    assert svc.resolver_ticker("Ambev") == "ABEV3"
+    assert svc.resolver_ticker("Casas Bahia") == "BHIA3"
+    assert svc.resolver_ticker("Atacadão") == "CRFB3"
+    assert svc.resolver_ticker("Drogasil") == "RADL3"
+    assert svc.resolver_ticker("Nubank") == "ROXO34"
+
+    # 2. Autocomplete com marcas
+    res_magalu = svc.buscar_ativos("Magalu")
+    assert any(r["ticker"] == "MGLU3" for r in res_magalu)
+
+    res_ipiranga = svc.buscar_ativos("Posto Ipiranga")
+    assert any(r["ticker"] == "UGPA3" for r in res_ipiranga)
+
+    # 3. Interceptação didática de Cooperativas (Sicredi, Sicoob, Cresol) e Caixa
+    with pytest.raises(svc.EntidadeNaoListada) as exc_sicredi:
+        svc.resolver_ticker("Sicredi")
+    assert "Cooperativa de Crédito" in str(exc_sicredi.value)
+
+    res_sicredi = svc.buscar_ativos("Sicredi")
+    assert any("Sicredi" in r["ticker"] for r in res_sicredi)
+    assert any(r.get("tipo") == "cooperativa" for r in res_sicredi)
+
+    # 4. Acesso HTTP /analisar com Sicredi deve devolver HTTP 200 e alternativas
+    resp_sicredi = client.get("/analisar?ticker=Sicredi")
+    assert resp_sicredi.status_code == 200
+    assert "Cooperativa de Crédito" in resp_sicredi.text
+    assert "BBAS3" in resp_sicredi.text
+    assert "ITUB4" in resp_sicredi.text
+    assert "BBDC4" in resp_sicredi.text

@@ -204,6 +204,11 @@ class Usuario(Base):
     perfil_investidor = Column(String(50), default="Fundamentalista")
     aceitou_termos_em = Column(DateTime, default=agora_utc)
     data_cadastro = Column(DateTime, default=agora_utc)
+    plano = Column(String(20), default="free", server_default="free", nullable=False)
+
+    @property
+    def eh_pro(self) -> bool:
+        return (self.plano or "free").lower() == "pro"
 
     monitoramentos = relationship(
         "MonitoramentoUsuario",

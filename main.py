@@ -404,7 +404,7 @@ def verificar_saude():
 @app.get("/api/buscar-ativos")
 @limiter.limit("40/minute")
 def api_buscar_ativos(request: Request, q: str = Query("", max_length=60)):
-    """Autocomplete da barra de busca: aceita nome da empresa ou parte do ticker."""
+    """Autocomplete da barra de busca: aceita marcas populares, cooperativas, empresas e tickers."""
     return JSONResponse({"resultados": svc.buscar_ativos(q, limite=8)})
 
 
@@ -447,6 +447,8 @@ def _montar_resposta_cache(
         if isinstance(cotacao_cache.dados, dict)
         else json.loads(cotacao_cache.dados)
     )
+    dados_cache = svc.garantir_blocos_didaticos(dados_cache)
+    eh_pro = bool(usuario and getattr(usuario, "eh_pro", False))
     analise_cache = (
         db.query(AnaliseIA)
         .filter(AnaliseIA.cotacao_id == cotacao_cache.id)
@@ -481,7 +483,19 @@ def _montar_resposta_cache(
         name="resultado.html",
         context={
             "usuario": usuario,
+            "eh_pro": eh_pro,
+            "usuario_pro": eh_pro,
             "dados": dados_cache,
+            "bloco1": dados_cache.get("Dossie_Didatico") or {},
+            "bloco2": dados_cache.get("Simulador_Realidade") or {},
+            "bloco3": {
+                "pares": dados_cache.get("Pares_Setoriais") or [],
+                "macro": dados_cache.get("Termometro_Macro") or {},
+            },
+            "bloco4": {
+                "cenarios": dados_cache.get("Cenarios_Projetados") or {},
+                "multiplos_traduzidos": dados_cache.get("Multiplos_Traduzidos") or {},
+            },
             "relatorio_html": relatorio_html,
             "origem": origem,
             "motor": motor_cache,
@@ -501,8 +515,30 @@ def analisar_ativo(
     db: Session = Depends(obter_sessao_banco),
     usuario: Optional[Usuario] = Depends(auth.obter_usuario_atual),
 ):
+    entidade_nl = svc.obter_entidade_nao_listada(ticker)
+    if entidade_nl:
+        return templates.TemplateResponse(
+            request=request,
+            name="nao_listada.html",
+            context={
+                "entidade": entidade_nl,
+                "usuario": usuario,
+            },
+            status_code=200,
+        )
+
     try:
         ticker_ok = svc.resolver_ticker(ticker)
+    except svc.EntidadeNaoListada as e:
+        return templates.TemplateResponse(
+            request=request,
+            name="nao_listada.html",
+            context={
+                "entidade": e.entidade,
+                "usuario": usuario,
+            },
+            status_code=200,
+        )
     except svc.ErroAtivo as e:
         painel_ativos = obter_recentes_seguro(db)
         return templates.TemplateResponse(
@@ -570,6 +606,7 @@ def analisar_ativo(
 
         try:
             dados = svc.extrair_raio_x_b3(ticker_ok)
+            dados = svc.garantir_blocos_didaticos(dados)
         except svc.ErroAtivo as e:
             painel_ativos = obter_recentes_seguro(db)
             return templates.TemplateResponse(
@@ -608,13 +645,26 @@ def analisar_ativo(
             db.rollback()
             log.exception("Erro ao gravar coleta no banco de dados")
 
+    eh_pro = bool(usuario and getattr(usuario, "eh_pro", False))
     painel_ativos = obter_recentes_seguro(db)
     return templates.TemplateResponse(
         request=request,
         name="resultado.html",
         context={
             "usuario": usuario,
+            "eh_pro": eh_pro,
+            "usuario_pro": eh_pro,
             "dados": dados,
+            "bloco1": dados.get("Dossie_Didatico") or {},
+            "bloco2": dados.get("Simulador_Realidade") or {},
+            "bloco3": {
+                "pares": dados.get("Pares_Setoriais") or [],
+                "macro": dados.get("Termometro_Macro") or {},
+            },
+            "bloco4": {
+                "cenarios": dados.get("Cenarios_Projetados") or {},
+                "multiplos_traduzidos": dados.get("Multiplos_Traduzidos") or {},
+            },
             "relatorio_html": relatorio_html,
             "origem": "Tempo Real (B3)",
             "motor": motor_usado,

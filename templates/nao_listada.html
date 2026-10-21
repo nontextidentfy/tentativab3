@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+
+{% block title %}{{ entidade.nome }} | Entenda por que não está na B3 e alternativas{% endblock %}
+
+{% block extra_css %}
+<style>
+  .nao-listada-voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 1.5rem;
+  }
+  .nao-listada-hero {
+    position: relative;
+    padding: 2.5rem 2rem 2rem;
+    background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.12) 0%, rgba(15, 23, 42, 0) 80%), var(--card);
+    border: 1px solid var(--borda);
+    border-radius: 18px;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+  }
+  .nao-listada-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: var(--destaque);
+    font-size: 0.82rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 1rem;
+  }
+  .nao-listada-titulo {
+    font-size: 1.85rem;
+    font-weight: 800;
+    line-height: 1.25;
+    margin: 0 0 0.85rem;
+    color: var(--texto);
+    letter-spacing: -0.02em;
+  }
+  .nao-listada-sub {
+    font-size: 1.05rem;
+    color: var(--suave);
+    max-width: 800px;
+    margin: 0;
+    line-height: 1.6;
+  }
+  .secao-didatica {
+    background: var(--card);
+    border: 1px solid var(--borda);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2.5rem;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.35);
+  }
+  .didatica-topo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--borda);
+  }
+  .didatica-icone {
+    font-size: 1.75rem;
+    line-height: 1;
+  }
+  .didatica-titulo {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--destaque);
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .didatica-corpo {
+    margin-bottom: 1.5rem;
+  }
+  .didatica-texto {
+    font-size: 0.98rem;
+    color: var(--suave);
+    line-height: 1.7;
+    margin: 0 0 1rem;
+  }
+  .didatica-destaque {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    margin-top: 1.25rem;
+  }
+  .didatica-destaque-item {
+    background: var(--card-alt);
+    border: 1px solid var(--borda);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    color: var(--texto);
+    font-size: 0.92rem;
+    line-height: 1.55;
+  }
+  .alternativas-secao-header {
+    margin-bottom: 1.5rem;
+  }
+  .alternativas-pill {
+    display: inline-block;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--destaque);
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+  }
+  .alternativas-titulo {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: var(--texto);
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.02em;
+  }
+  .alternativas-sub {
+    font-size: 0.95rem;
+    color: var(--apagado);
+    margin: 0;
+    max-width: 760px;
+    line-height: 1.55;
+  }
+  .grid-alternativas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-bottom: 2rem;
+  }
+  .card-alternativa {
+    background: var(--card);
+    border: 1px solid var(--borda);
+    border-radius: 14px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .card-alternativa:hover {
+    transform: translateY(-3px);
+    border-color: var(--destaque);
+    box-shadow: 0 8px 24px -4px rgba(56, 189, 248, 0.2);
+  }
+  .card-alt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .card-alt-ticker {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--destaque);
+    letter-spacing: 0.02em;
+  }
+  .card-alt-setor {
+    font-size: 0.75rem;
+    color: var(--apagado);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 3px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--borda);
+  }
+  .card-alt-nome {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--texto);
+    margin: 0 0 0.65rem;
+  }
+  .card-alt-motivo {
+    font-size: 0.88rem;
+    color: var(--suave);
+    line-height: 1.55;
+    margin: 0 0 1.25rem;
+    flex-grow: 1;
+  }
+  .card-alt-link {
+    width: 100%;
+    text-align: center;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/" class="btn btn-sec nao-listada-voltar">
+  ← Voltar para a Busca
+</a>
+
+<!-- HERO DA INSTITUIÇÃO NÃO LISTADA -->
+<section class="nao-listada-hero">
+  <span class="nao-listada-badge">🏛️ {{ entidade.tipo_entidade }}</span>
+  <h1 class="nao-listada-titulo">{{ entidade.titulo }}</h1>
+  <p class="nao-listada-sub">{{ entidade.resumo }}</p>
+</section>
+
+<!-- SEÇÃO DIDÁTICA: O QUE É E POR QUE NÃO ESTÁ NA BOLSA -->
+<section class="secao-didatica">
+  <div class="didatica-topo">
+    <span class="didatica-icone">🎓</span>
+    <h2 class="didatica-titulo">Entenda com o Professor da B3: Por que o {{ entidade.nome }} não possui ações na Bolsa?</h2>
+  </div>
+
+  <div class="didatica-corpo">
+    <p class="didatica-texto">{{ entidade.explicacao }}</p>
+  </div>
+
+  <div class="didatica-destaque">
+    <div class="didatica-destaque-item">
+      <strong>🤝 Modelo Cooperativo:</strong> Os clientes são cooperados e associados com cotas locais. Os ganhos são distribuídos como sobras anuais baseadas no uso dos serviços, sem negociação pública no pregão da B3.
+    </div>
+    <div class="didatica-destaque-item">
+      <strong>📈 Ações de Bolsa (S.A.):</strong> Nas Sociedades Anônimas de capital aberto, qualquer investidor pode adquirir frações da empresa na corretora, tendo liquidez imediata para vender e recebendo dividendos em dinheiro na conta.
+    </div>
+  </div>
+</section>
+
+<!-- ALTERNATIVAS LISTADAS NA B3 -->
+<section>
+  <div class="alternativas-secao-header">
+    <span class="alternativas-pill">Alternativas da Bolsa de Valores</span>
+    <h2 class="alternativas-titulo">Empresas e Bancos Listados no Setor de {{ entidade.nome }}</h2>
+    <p class="alternativas-sub">
+      Se você quer investir no agronegócio, crédito regional ou varejo bancário com liquidez diária e dividendos auditados, analise as principais empresas da B3 que atuam nesse mesmo mercado:
+    </p>
+  </div>
+
+  <div class="grid-alternativas">
+    {% for alt in entidade.alternativas %}
+      <div class="card-alternativa">
+        <div>
+          <div class="card-alt-header">
+            <span class="card-alt-ticker">{{ alt.ticker }}</span>
+            <span class="card-alt-setor">{{ alt.setor }}</span>
+          </div>
+          <h3 class="card-alt-nome">{{ alt.nome }}</h3>
+          <p class="card-alt-motivo">{{ alt.motivo }}</p>
+        </div>
+        <a href="/analisar?ticker={{ alt.ticker }}" class="btn btn-destaque card-alt-link">
+          ⚡ Analisar {{ alt.ticker }}
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

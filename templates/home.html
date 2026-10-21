@@ -202,19 +202,19 @@
   </div>
 
   <h1 class="hero-title">
-    Chega de planilhas confusas e relatórios cansativos.
-    <span class="gradient-text">Tenha um resumo financeiro inteligente</span> analisando qualquer ação ou FII da B3 para você.
+    Viu um guru prometendo renda fácil na Bolsa?
+    <span class="gradient-text">Digite o nome da empresa aqui</span> e descubra a verdade com cálculos reais em segundos.
   </h1>
 
   <p class="hero-subtitle">
-    Raio-X fundamentalista em segundos, Preço Justo de Graham, Preço Teto de Bazin e indicadores de volume e risco sem ruído de mercado.
+    Chega de planilhas confusas e falsas promessas de lucros fáceis. Tenha um diagnóstico financeiro independente confrontando a fantasia da internet com o histórico real de balanços, proventos e valuation da B3.
   </p>
 
   <!-- BUSCA INTEGRADA NA HERO -->
   <form class="search-box hero-search-box" method="get" action="/analisar" autocomplete="off">
     <div class="busca-wrap">
       <input type="text" id="campo-busca" name="ticker"
-             placeholder="Digite o nome da empresa ou o ticker (Ex: Petrobras, Itaú, VALE3, MXRF11, WEGE3)..."
+             placeholder="Digite o nome da marca (Ex: Magalu, Posto Ipiranga, Sicredi) ou o ticker (Ex: PETR4, VALE3)..."
              required minlength="2" maxlength="60" autocomplete="off" spellcheck="false"
              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugestoes-busca">
       <ul id="sugestoes-busca" class="sugestoes" role="listbox" hidden></ul>
@@ -228,11 +228,13 @@
   <div class="hero-shortcuts">
     <span class="shortcuts-label">⚡ Degustação Imediata: Clique para analisar</span>
     <div class="shortcuts-badges">
-      {% for t in ["PETR4", "VALE3", "ITUB4", "MXRF11", "WEGE3", "BBAS3", "B3SA3", "TAEE11", "HGLG11", "XPML11"] %}
-        <a class="shortcut-chip" data-carrega href="/analisar?ticker={{ t }}">
-          📈 {{ t }}
-        </a>
-      {% endfor %}
+      <a class="shortcut-chip" data-carrega href="/analisar?ticker=PETR4">📈 PETR4</a>
+      <a class="shortcut-chip" data-carrega href="/analisar?ticker=VALE3">⛏️ VALE3</a>
+      <a class="shortcut-chip" data-carrega href="/analisar?ticker=ITUB4">🏦 ITUB4</a>
+      <a class="shortcut-chip" data-carrega href="/analisar?ticker=MXRF11">🏢 MXRF11</a>
+      <a class="shortcut-chip" data-carrega href="/analisar?ticker=Magalu">🛍️ Magalu</a>
+      <a class="shortcut-chip" data-carrega href="/analisar?ticker=Posto+Ipiranga">⛽ Posto Ipiranga</a>
+      <a class="shortcut-chip" data-carrega href="/analisar?ticker=Sicredi">🌾 Sicredi</a>
     </div>
   </div>
 

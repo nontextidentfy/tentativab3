@@ -102,6 +102,11 @@ def obter_usuario_atual(
     return db.query(Usuario).filter(Usuario.id == dados["uid"]).first()
 
 
+def verificar_usuario_pro(usuario: Optional[Usuario] = Depends(obter_usuario_atual)) -> bool:
+    """Verifica se o usuário atual está autenticado e possui plano Pro."""
+    return bool(usuario and getattr(usuario, "eh_pro", False))
+
+
 # ---------------------------------------------------------------------------
 # Disparo de E-mails (SMTP ou Fallback no Console para Desenvolvimento)
 # ---------------------------------------------------------------------------

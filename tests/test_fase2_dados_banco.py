@@ -217,8 +217,8 @@ def test_2_c_migracao_alembic_sobe_e_desce_com_dados_exemplo(tmp_path):
                 },
             )
 
-    # 2. Executa upgrade até head (a1b2c3d4e5f6)
-    command.upgrade(alembic_cfg, "head")
+    # 2. Executa upgrade até a revisão da fase 2 (a1b2c3d4e5f6)
+    command.upgrade(alembic_cfg, "a1b2c3d4e5f6")
 
     with eng.connect() as conn:
         insp = sa.inspect(conn)
