@@ -493,7 +493,7 @@ def _montar_resposta_cache(
                 "macro": dados_cache.get("Termometro_Macro") or {},
             },
             "bloco4": {
-                "cenarios": dados_cache.get("Cenarios_Projetados") or {},
+                "simulador_premissas": dados_cache.get("Simulador_Premissas") or svc.simular_premissas_usuario(dados_cache),
                 "multiplos_traduzidos": dados_cache.get("Multiplos_Traduzidos") or {},
             },
             "relatorio_html": relatorio_html,
@@ -662,7 +662,7 @@ def analisar_ativo(
                 "macro": dados.get("Termometro_Macro") or {},
             },
             "bloco4": {
-                "cenarios": dados.get("Cenarios_Projetados") or {},
+                "simulador_premissas": dados.get("Simulador_Premissas") or svc.simular_premissas_usuario(dados),
                 "multiplos_traduzidos": dados.get("Multiplos_Traduzidos") or {},
             },
             "relatorio_html": relatorio_html,

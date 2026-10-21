@@ -303,31 +303,59 @@ def test_tier1_f07_bloco3_termometro_macro_sensibilidade_commodities():
         assert True
 
 
-# --- Feature 8: Bloco 4 (Camada Pro): Modelagem de Cenários 1 a 5 Anos ---
+# --- Feature 8: Bloco 4: Simulador de Premissas do Usuário (1 e 5 Anos) ---
 
-def test_tier1_f08_bloco4_cenarios_ia_3_vieses_contract():
+def test_tier1_f08_bloco4_simular_premissas_aritmetica_valores_conhecidos():
     """
-    [F8.1] Bloco 4: Contrato de modelagem preditiva em 3 cenários matemáticos:
-    Pessimista, Realista e Otimista.
-    Fonte: ORIGINAL_REQUEST §R5, PROJECT.md F8.
+    [Passo 3] Bloco 4: simular_premissas_usuario realiza apenas aritmética transparente:
+    LPA futuro = LPA atual * (1 + g)^anos; valor da cota = LPA futuro * P/L escolhido;
+    proventos = DY atual aplicado ano a ano.
     """
-    cenarios = ["pessimista", "realista", "otimista"]
-    if hasattr(svc, "calcular_cenarios_ia_1_a_5_anos"):
-        dados = obter_fixture_ativo("PETR4")
-        resultado = svc.calcular_cenarios_ia_1_a_5_anos("PETR4", dados)
-        for c in cenarios:
-            assert c in resultado or c.capitalize() in resultado
-    else:
-        assert len(cenarios) == 3
+    dados = {
+        "Cotacao_e_Mercado": {"Preco_Atual": 40.00},
+        "Valuation": {"LPA": 5.00, "P_L": 8.0},
+        "Proventos": {"Dividend_Yield_Real_12m": 0.10},
+    }
+    # Crescimento +10% a.a., P/L futuro = 10, prazo = 1 ano:
+    # LPA futuro = 5.0 * 1.10 = 5.50
+    # Valor da cota nessa hipótese = 5.50 * 10 = 55.00
+    # Proventos (1 ano) = 40.00 * 0.10 * 1 = 4.00
+    res_1a = svc.simular_premissas_usuario(dados, crescimento_lucro=0.10, pl_futuro=10, anos=1)
+    assert res_1a["disponivel"] is True
+    assert res_1a["lpa_futuro"] == pytest.approx(5.50, abs=0.01)
+    assert res_1a["valor_cota_hipotese"] == pytest.approx(55.00, abs=0.01)
+    assert res_1a["proventos_acumulados"] == pytest.approx(4.00, abs=0.01)
+    assert "Isto não é previsão nem recomendação. É só a conta das premissas que você escolheu." in res_1a["aviso"]
+
+    # Prazo = 5 anos, crescimento 0%, P/L futuro = 6:
+    # LPA futuro = 5.0 * (1.0)^5 = 5.00; valor cota = 5.00 * 6 = 30.00; proventos = 4.00 * 5 = 20.00
+    res_5a = svc.simular_premissas_usuario(dados, crescimento_lucro=0.0, pl_futuro=6, anos=5)
+    assert res_5a["disponivel"] is True
+    assert res_5a["lpa_futuro"] == pytest.approx(5.00, abs=0.01)
+    assert res_5a["valor_cota_hipotese"] == pytest.approx(30.00, abs=0.01)
+    assert res_5a["proventos_acumulados"] == pytest.approx(20.00, abs=0.01)
 
 
-def test_tier1_f08_bloco4_cenarios_ia_horizontes_1_e_5_anos():
+def test_tier1_f08_bloco4_lpa_negativo_ou_sem_cotacao_bloqueia():
     """
-    [F8.2] Bloco 4: Projeções devem cobrir os horizontes de 1 ano e 5 anos.
-    Fonte: ORIGINAL_REQUEST §R5, PROJECT.md F8.
+    [Passo 3] Bloco 4: Sem LPA positivo ou sem cotação, bloqueia a simulação e informa o motivo real.
     """
-    horizontes = ["1 ano", "5 anos"]
-    assert len(horizontes) == 2
+    dados_prejuizo = {
+        "Cotacao_e_Mercado": {"Preco_Atual": 15.00},
+        "Valuation": {"LPA": -1.25, "P_L": -12.0},
+        "Proventos": {"Dividend_Yield_Real_12m": 0.0},
+    }
+    res_neg = svc.simular_premissas_usuario(dados_prejuizo, crescimento_lucro=0.0, pl_futuro=10, anos=1)
+    assert res_neg["disponivel"] is False
+    assert "não dá para simular: a empresa não teve lucro nos últimos 12 meses" in res_neg["motivo"].lower()
+
+    dados_sem_cot = {
+        "Cotacao_e_Mercado": {"Preco_Atual": 0.0},
+        "Valuation": {"LPA": 2.00},
+    }
+    res_sem_cot = svc.simular_premissas_usuario(dados_sem_cot, crescimento_lucro=0.0, pl_futuro=10, anos=1)
+    assert res_sem_cot["disponivel"] is False
+    assert "sem cotação" in res_sem_cot["motivo"].lower()
 
 
 # --- Feature 9: Bloco 4 (Camada Pro): Tradução Absoluta de Múltiplos (R1) ---
@@ -654,57 +682,33 @@ def test_tier2_b22_fii_multiplos_nao_aplicaveis(client: TestClient):
     assert "HGLG11" in html
 
 
-def test_tier2_b23_cenarios_ia_monotonicidade_estrita_e_penny_stocks():
+def test_tier2_b23_bloco4_grep_html_sem_palavras_proibidas(client: TestClient, sessao_db):
     """
-    [B23] Bloco 4: Validação matemática estrita de monotonicidade e penny stocks.
-    Garante que:
-    1. Preço Alvo e Retorno Total: Pessimista <= Realista <= Otimista (sempre).
-    2. Ações de alto P/L (e.g. WEGE3 com P/L=33.75) não sofrem inversão de múltiplos.
-    3. Penny stocks (< R$ 1.00, e.g. OIBR3 a R$ 0.50) não são artificialmente infladas para R$ 1.00.
-    4. Projeção de proventos (DY) respeita dy_pess <= dy_real <= dy_otim (incluindo dy0=0).
+    [Passo 3] Bloco 4: O HTML renderizado do Bloco 4 deve conter 'Simule o futuro com as suas premissas',
+    o aviso obrigatório, 'Leitura' nos múltiplos, e ZERO ocorrências das palavras proibidas:
+    'preço-alvo', 'preco_alvo', 'IA', 'preditiv', 'modelagem', 'cenário realista'.
     """
-    # 1. Caso WEGE3 (High P/L & Low DY)
-    dados_wege = {
-        "Cotacao_e_Mercado": {"Preco_Atual": 54.00},
-        "Valuation": {"LPA": 1.60, "P_L": 33.75},
-        "Proventos": {"Dividend_Yield_Real_12m": 0.015},
-        "Rentabilidade_e_Eficiencia": {"ROE": 0.32},
-    }
-    res_wege = svc.calcular_cenarios_ia_1_a_5_anos("WEGE3", dados_wege)
-    pess_5 = res_wege["pessimista"]["5_anos"]["preco_alvo"]
-    real_5 = res_wege["realista"]["5_anos"]["preco_alvo"]
-    otim_5 = res_wege["otimista"]["5_anos"]["preco_alvo"]
-    assert pess_5 <= real_5 <= otim_5, f"Inversão em WEGE3 5a: {pess_5} > {real_5} > {otim_5}"
+    u = _criar_usuario_teste(sessao_db, email="bloco4_audit@teste.com", plano="pro")
+    client.cookies.update(_criar_cookie_autenticado(u.id))
+    resp = client.get("/analisar?ticker=PETR4")
+    assert resp.status_code == 200
+    html = resp.text
 
-    ret_pess_5 = res_wege["pessimista"]["5_anos"]["retorno_total_pct"]
-    ret_real_5 = res_wege["realista"]["5_anos"]["retorno_total_pct"]
-    ret_otim_5 = res_wege["otimista"]["5_anos"]["retorno_total_pct"]
-    assert ret_pess_5 <= ret_real_5 <= ret_otim_5
+    assert "Simule o futuro com as suas premissas" in html
+    assert "Isto não é previsão nem recomendação. É só a conta das premissas que você escolheu." in html
 
-    # 2. Caso OIBR3 (Penny stock < R$ 1.00)
-    dados_oibr = {
-        "Cotacao_e_Mercado": {"Preco_Atual": 0.50},
-        "Valuation": {"LPA": 0.02, "P_L": 25.0},
-        "Proventos": {"Dividend_Yield_Real_12m": 0.0},
-        "Rentabilidade_e_Eficiencia": {"ROE": 0.05},
-    }
-    res_oibr = svc.calcular_cenarios_ia_1_a_5_anos("OIBR3", dados_oibr)
-    pess_1_preco = res_oibr["pessimista"]["1_ano"]["preco_alvo"]
-    pess_1_ret = res_oibr["pessimista"]["1_ano"]["retorno_total_pct"]
-    assert pess_1_preco < 0.50, f"Penny stock inflada: {pess_1_preco}"
-    assert pess_1_ret < 0.0, f"Retorno pessimista positivo em penny stock: {pess_1_ret}%"
+    # Recorta o conteúdo do Bloco 4 para auditoria estrita de vocabulário
+    idx_ini = html.find('id="bloco-4-simulador-premissas"')
+    assert idx_ini != -1, "Container do Bloco 4 não encontrado no HTML"
+    idx_fim = html.find("<!-- SEÇÕES DE FUNDAMENTOS CLÁSSICOS", idx_ini)
+    trecho_bloco4 = html[idx_ini:idx_fim] if idx_fim != -1 else html[idx_ini:]
 
-    # 3. Caso Zero Dividendos (PRIO3)
-    dados_prio = {
-        "Cotacao_e_Mercado": {"Preco_Atual": 45.00},
-        "Valuation": {"LPA": 5.00, "P_L": 9.0},
-        "Proventos": {"Dividend_Yield_Real_12m": 0.0},
-        "Rentabilidade_e_Eficiencia": {"ROE": 0.25},
-    }
-    res_prio = svc.calcular_cenarios_ia_1_a_5_anos("PRIO3", dados_prio)
-    assert res_prio["pessimista"]["1_ano"]["dividendos_acumulados"] == 0.0
-    assert res_prio["realista"]["1_ano"]["dividendos_acumulados"] == 0.0
-    assert res_prio["otimista"]["1_ano"]["dividendos_acumulados"] == 0.0
+    proibidas = ["preço-alvo", "preço alvo", "preco_alvo", "preditiv", "modelagem", "cenário realista"]
+    for palavra in proibidas:
+        assert palavra not in trecho_bloco4.lower(), f"Palavra proibida '{palavra}' encontrada no Bloco 4"
+    assert "IA" not in trecho_bloco4, "Sigla 'IA' encontrada indevidamente no Bloco 4"
+    assert "Leitura:" in trecho_bloco4 or "Leitura" in trecho_bloco4
+    client.cookies.clear()
 
 
 def test_tier2_b24_migracao_alembic_coluna_plano_upgrade_downgrade(tmp_path):

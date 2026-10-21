@@ -1951,147 +1951,98 @@ def calcular_termometro_macro(ticker: str, setor: str = "") -> dict:
 
 
 # ===========================================================================
-# BLOCO 4 (Camada Pro): Projeções de Cenários da IA (1 a 5 anos) & Tradução R1
+# BLOCO 4: Simulador de Premissas do Usuário & Tradução Absoluta R1
 # ===========================================================================
-def calcular_cenarios_ia_1_a_5_anos(ticker: str, dados: dict) -> dict:
+AVISO_PREMISSAS_USUARIO = (
+    "Isto não é previsão nem recomendação. É só a conta das premissas que você escolheu."
+)
+
+
+def simular_premissas_usuario(
+    dados: dict,
+    crescimento_lucro: float = 0.0,
+    pl_futuro: float = 10.0,
+    anos: int = 1,
+) -> dict:
+    """
+    Realiza exclusivamente a aritmética das premissas escolhidas pelo usuário:
+    - LPA futuro = LPA atual * (1 + crescimento_lucro) ** anos
+    - Valor da cota nessa hipótese = LPA futuro * pl_futuro
+    - Proventos = DY atual aplicado ano a ano (preco_atual * dy_atual * anos)
+    Sem valores inventados quando não há cotação ou lucro positivo nos últimos 12 meses.
+    """
     dados = dados or {}
     cot = dados.get("Cotacao_e_Mercado") or {}
     val = dados.get("Valuation") or {}
     prov = dados.get("Proventos") or {}
-    rent = dados.get("Rentabilidade_e_Eficiencia") or {}
     num = dados.get("Numeros") or {}
 
-    p0 = float(cot.get("Preco_Atual") or num.get("preco_atual") or 30.0)
-    if p0 <= 0:
-        p0 = 10.0
+    preco_atual = numero(cot.get("Preco_Atual"))
+    if preco_atual is None:
+        preco_atual = numero(num.get("preco_atual"))
 
-    lpa0 = float(val.get("LPA") or (p0 / 8.0 if p0 > 0 else 3.5))
-    if lpa0 <= 0:
-        lpa0 = max(0.01, round(p0 / 12.0, 4))
-
-    pl0 = float(val.get("P_L") or (p0 / lpa0 if lpa0 > 0 else 8.0))
-    if pl0 <= 0:
-        pl0 = 8.0
+    lpa_atual = numero(val.get("LPA"))
 
     val_dy = prov.get("Dividend_Yield_Real_12m")
     if val_dy is not None:
-        dy0 = float(val_dy)
+        dy_atual = float(numero(val_dy) or 0.0)
     elif prov.get("dividend_yield_12m") is not None:
-        dy0 = float(prov.get("dividend_yield_12m"))
+        dy_atual = float(numero(prov.get("dividend_yield_12m")) or 0.0)
     elif num.get("dy_12m") is not None:
-        dy0 = float(num.get("dy_12m")) / 100.0
+        dy_atual = (float(numero(num.get("dy_12m")) or 0.0)) / 100.0
     else:
-        dy0 = 0.06
-    if dy0 < 0:
-        dy0 = 0.0
+        dy_atual = 0.0
+    if dy_atual < 0:
+        dy_atual = 0.0
 
-    roe0 = float(rent.get("ROE") or 0.15)
-    g_base = min(0.12, max(0.03, roe0 * 0.50))
+    if preco_atual is None or preco_atual <= 0:
+        return {
+            "disponivel": False,
+            "motivo": "não dá para simular: sem cotação",
+            "preco_atual": None,
+            "lpa_atual": lpa_atual,
+            "dy_atual": round(dy_atual, 6),
+            "aviso": AVISO_PREMISSAS_USUARIO,
+        }
 
-    # Preço mínimo dinâmico para penny stocks (B3 tick floor = 0.01)
-    p_min = max(0.01, round(p0 * 0.05, 4))
+    if lpa_atual is None or lpa_atual <= 0:
+        return {
+            "disponivel": False,
+            "motivo": "não dá para simular: a empresa não teve lucro nos últimos 12 meses",
+            "preco_atual": round(float(preco_atual), 2),
+            "lpa_atual": lpa_atual,
+            "dy_atual": round(dy_atual, 6),
+            "aviso": AVISO_PREMISSAS_USUARIO,
+        }
 
-    # Múltiplos P/L com garantia estrita de monotonicidade: pl_pess <= pl_real <= pl_otim
-    pl_real = max(5.0, min(28.0, pl0))
-    pl_pess = max(3.5, min(pl_real * 0.80, pl0 * 0.75))
-    pl_otim = max(pl_real * 1.20, min(35.0, pl0 * 1.25))
+    g_raw = float(numero(crescimento_lucro) or 0.0)
+    g = (g_raw / 100.0) if abs(g_raw) > 1.0 else g_raw
+    pl_esc = float(numero(pl_futuro) or 10.0)
+    n_anos = max(1, int(numero(anos) or 1))
 
-    # Dividend Yield com ordenação estrita: dy_pess <= dy_real <= dy_otim
-    dy_real = dy0
-    dy_pess = max(0.0, dy0 * 0.70)
-    dy_otim = max(dy_real, dy0 * 1.15)
+    lpa_futuro = float(lpa_atual) * ((1.0 + g) ** n_anos)
+    valor_cota_hipotese = lpa_futuro * pl_esc
+    proventos_por_ano = float(preco_atual) * dy_atual
+    proventos_acumulados = proventos_por_ano * n_anos
+    valor_total_hipotese = valor_cota_hipotese + proventos_acumulados
+    variacao_total_pct = ((valor_total_hipotese - float(preco_atual)) / float(preco_atual)) * 100.0
 
-    # 1. Pessimista
-    g_pess = max(-0.04, g_base - 0.05)
-    lpa_pess_1 = lpa0 * (1.0 + g_pess)
-    preco_pess_1 = max(p_min, lpa_pess_1 * pl_pess)
-    div_pess_1 = p0 * dy_pess
-    ret_pess_1 = ((preco_pess_1 + div_pess_1 - p0) / p0) * 100.0
-
-    lpa_pess_5 = lpa0 * ((1.0 + g_pess) ** 5)
-    preco_pess_5 = max(p_min, lpa_pess_5 * pl_pess)
-    div_pess_5 = sum(p0 * dy_pess * ((1.0 + g_pess) ** k) for k in range(5))
-    ret_pess_5 = ((preco_pess_5 + div_pess_5 - p0) / p0) * 100.0
-
-    # 2. Realista
-    g_real = g_base
-    lpa_real_1 = lpa0 * (1.0 + g_real)
-    preco_real_1 = max(preco_pess_1, max(p_min, lpa_real_1 * pl_real))
-    div_real_1 = max(div_pess_1, p0 * dy_real)
-    ret_real_1 = ((preco_real_1 + div_real_1 - p0) / p0) * 100.0
-
-    lpa_real_5 = lpa0 * ((1.0 + g_real) ** 5)
-    preco_real_5 = max(preco_pess_5, max(p_min, lpa_real_5 * pl_real))
-    div_real_5 = max(div_pess_5, sum(p0 * dy_real * ((1.0 + g_real) ** k) for k in range(5)))
-    ret_real_5 = ((preco_real_5 + div_real_5 - p0) / p0) * 100.0
-
-    # 3. Otimista
-    g_otim = min(0.20, g_real + 0.06)
-    lpa_otim_1 = lpa0 * (1.0 + g_otim)
-    preco_otim_1 = max(preco_real_1, max(p_min, lpa_otim_1 * pl_otim))
-    div_otim_1 = max(div_real_1, p0 * dy_otim)
-    ret_otim_1 = ((preco_otim_1 + div_otim_1 - p0) / p0) * 100.0
-
-    lpa_otim_5 = lpa0 * ((1.0 + g_otim) ** 5)
-    preco_otim_5 = max(preco_real_5, max(p_min, lpa_otim_5 * pl_otim))
-    div_otim_5 = max(div_real_5, sum(p0 * dy_otim * ((1.0 + g_otim) ** k) for k in range(5)))
-    ret_otim_5 = ((preco_otim_5 + div_otim_5 - p0) / p0) * 100.0
-
-    cenarios = {
-        "pessimista": {
-            "1_ano": {
-                "preco_alvo": round(preco_pess_1, 2),
-                "dividendos_acumulados": round(div_pess_1, 2),
-                "retorno_total_pct": round(ret_pess_1, 2),
-                "lucro_projetado": round(lpa_pess_1, 2),
-                "premissas": "Queda de demanda, compressão de múltiplos e pressão sobre margens.",
-            },
-            "5_anos": {
-                "preco_alvo": round(preco_pess_5, 2),
-                "dividendos_acumulados": round(div_pess_5, 2),
-                "retorno_total_pct": round(ret_pess_5, 2),
-                "lucro_projetado": round(lpa_pess_5, 2),
-                "premissas": "Ciclo setorial desfavorável prolongado com disciplina defensiva de capital.",
-            },
-        },
-        "realista": {
-            "1_ano": {
-                "preco_alvo": round(preco_real_1, 2),
-                "dividendos_acumulados": round(div_real_1, 2),
-                "retorno_total_pct": round(ret_real_1, 2),
-                "lucro_projetado": round(lpa_real_1, 2),
-                "premissas": "Continuidade dos resultados recentes com crescimento alinhado ao histórico.",
-            },
-            "5_anos": {
-                "preco_alvo": round(preco_real_5, 2),
-                "dividendos_acumulados": round(div_real_5, 2),
-                "retorno_total_pct": round(ret_real_5, 2),
-                "lucro_projetado": round(lpa_real_5, 2),
-                "premissas": "Reinvestimento equilibrado de lucros gerando valor composto de longo prazo.",
-            },
-        },
-        "otimista": {
-            "1_ano": {
-                "preco_alvo": round(preco_otim_1, 2),
-                "dividendos_acumulados": round(div_otim_1, 2),
-                "retorno_total_pct": round(ret_otim_1, 2),
-                "lucro_projetado": round(lpa_otim_1, 2),
-                "premissas": "Ganhos expressivos de eficiência, mercado aquecido e expansão de múltiplos.",
-            },
-            "5_anos": {
-                "preco_alvo": round(preco_otim_5, 2),
-                "dividendos_acumulados": round(div_otim_5, 2),
-                "retorno_total_pct": round(ret_otim_5, 2),
-                "lucro_projetado": round(lpa_otim_5, 2),
-                "premissas": "Liderança de mercado consolidada com forte retorno aos acionistas e re-rating.",
-            },
-        },
-        "horizontes": ["1 ano", "5 anos"],
+    return {
+        "disponivel": True,
+        "motivo": "",
+        "preco_atual": round(float(preco_atual), 2),
+        "lpa_atual": round(float(lpa_atual), 4),
+        "dy_atual": round(dy_atual, 6),
+        "crescimento_lucro": round(g, 4),
+        "pl_futuro": round(pl_esc, 2),
+        "anos": n_anos,
+        "lpa_futuro": round(lpa_futuro, 4),
+        "valor_cota_hipotese": round(valor_cota_hipotese, 2),
+        "proventos_acumulados": round(proventos_acumulados, 2),
+        "valor_total_hipotese": round(valor_total_hipotese, 2),
+        "variacao_total_pct": round(variacao_total_pct, 2),
+        "aviso": AVISO_PREMISSAS_USUARIO,
     }
-    cenarios["Pessimista"] = cenarios["pessimista"]
-    cenarios["Realista"] = cenarios["realista"]
-    cenarios["Otimista"] = cenarios["otimista"]
-    return cenarios
 
 
 TRADUCAO_MULTIPLOS_R1 = {
@@ -2298,6 +2249,8 @@ def traduzir_multiplos_ativo(dados: dict) -> dict:
         item_div["classe_css"] = "neg"
     resultado["DIVIDA_EBITDA"] = item_div
 
+    for ch_m, val_m in resultado.items():
+        val_m["leitura"] = val_m.get("situacao", "")
     return resultado
 
 
@@ -2327,8 +2280,8 @@ def garantir_blocos_didaticos(dados: dict) -> dict:
         dados["Pares_Setoriais"] = obter_comparativo_setorial(ticker, str(info.get("sector") or ""))
     if "Termometro_Macro" not in dados or not dados["Termometro_Macro"]:
         dados["Termometro_Macro"] = calcular_termometro_macro(ticker, str(info.get("sector") or ""))
-    if "Cenarios_Projetados" not in dados or not dados["Cenarios_Projetados"]:
-        dados["Cenarios_Projetados"] = calcular_cenarios_ia_1_a_5_anos(ticker, dados)
+    dados["Simulador_Premissas"] = simular_premissas_usuario(dados, crescimento_lucro=0.0, pl_futuro=10.0, anos=1)
+    dados.pop("Cenarios_Projetados", None)
     if "Multiplos_Traduzidos" not in dados or not dados["Multiplos_Traduzidos"]:
         dados["Multiplos_Traduzidos"] = traduzir_multiplos_ativo(dados)
     return dados

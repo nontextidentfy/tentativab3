@@ -263,26 +263,6 @@
     gap: 12px;
     margin-top: 1rem;
   }
-  .cenarios-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 16px;
-    margin-bottom: 1.5rem;
-  }
-  .cenario-card {
-    background: rgba(7, 11, 18, 0.6);
-    border: 1px solid var(--borda);
-    border-radius: 12px;
-    padding: 1.25rem;
-  }
-  .cenario-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--borda);
-  }
   .traducao-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -322,7 +302,7 @@
 {% set pares_rivais = b3_dados.get('pares') or dados.get('Pares_Setoriais') or [] %}
 {% set macro = b3_dados.get('macro') or dados.get('Termometro_Macro') or {} %}
 {% set b4_dados = bloco4 or {} %}
-{% set cenarios = b4_dados.get('cenarios') or dados.get('Cenarios_Projetados') or {} %}
+{% set sim_premissas = b4_dados.get('simulador_premissas') or dados.get('Simulador_Premissas') or {} %}
 {% set mult_trad = b4_dados.get('multiplos_traduzidos') or dados.get('Multiplos_Traduzidos') or {} %}
 
 <div class="topo-ativo">
@@ -690,127 +670,90 @@
     </div>
 
     <!-- =================================================================== -->
-    <!-- BLOCO 4 (Camada Pro): Cálculos Densos & Cenários da IA (1 a 5 anos) -->
+    <!-- BLOCO 4: Simulador de Premissas do Usuário & Leitura dos Múltiplos  -->
     <!-- =================================================================== -->
-    <div class="dossie-bloco">
+    <div class="dossie-bloco" id="bloco-4-simulador-premissas">
       <div class="dossie-header">
-        <span class="badge badge-pos">Bloco 4 • Camada Pro • Modelagem Preditiva</span>
+        <span class="badge badge-pos">Bloco 4 • Calculadora de Premissas</span>
         <h3 style="margin:8px 0 4px; font-size:1.35rem; color:var(--texto);">
-          🤖 Projeções Matemáticas da IA em 3 Cenários (1 a 5 Anos)
+          🎛️ Simule o futuro com as suas premissas
         </h3>
         <div style="color:var(--suave); font-size:0.88rem;">
-          Simulações preditivas baseadas na projeção de lucros (LPA), múltiplos terminais e fluxo composto de proventos.
+          Escolha abaixo uma hipótese de evolução anual do lucro por ação (LPA), o múltiplo P/L futuro e o prazo para ver a conta aritmética na hora.
         </div>
       </div>
 
-      <div class="cenarios-grid">
-        <!-- Cenário Pessimista -->
-        {% set c_pess = cenarios.get('pessimista') or cenarios.get('Pessimista') or {} %}
-        {% set ret_pess_1 = c_pess.get('1_ano', {}).get('retorno_total_pct') or 0 %}
-        {% set ret_pess_5 = c_pess.get('5_anos', {}).get('retorno_total_pct') or 0 %}
-        <div class="cenario-card">
-          <div class="cenario-header">
-            <strong style="color:var(--neg);">🌧️ Cenário Pessimista</strong>
-            <span class="badge badge-neg">Desaceleração</span>
+      {% if sim_premissas.get('disponivel') %}
+      <div class="simulador-controles">
+        <div class="simulador-grupo">
+          <span style="font-size:0.82rem; color:var(--suave); font-weight:600;">Lucro anual (LPA):</span>
+          <button type="button" class="simulador-btn" data-cresc="-0.05" onclick="atualizarPremissas(-0.05, null, null)">-5% ao ano</button>
+          <button type="button" class="simulador-btn simulador-btn-ativo" data-cresc="0" onclick="atualizarPremissas(0, null, null)">0% ao ano</button>
+          <button type="button" class="simulador-btn" data-cresc="0.10" onclick="atualizarPremissas(0.10, null, null)">+10% ao ano</button>
+        </div>
+        <div class="simulador-grupo">
+          <span style="font-size:0.82rem; color:var(--suave); font-weight:600;">Múltiplo P/L futuro:</span>
+          <button type="button" class="simulador-btn" data-pl="6" onclick="atualizarPremissas(null, 6, null)">6</button>
+          <button type="button" class="simulador-btn simulador-btn-ativo" data-pl="10" onclick="atualizarPremissas(null, 10, null)">10</button>
+          <button type="button" class="simulador-btn" data-pl="15" onclick="atualizarPremissas(null, 15, null)">15</button>
+        </div>
+        <div class="simulador-grupo">
+          <span style="font-size:0.82rem; color:var(--suave); font-weight:600;">Prazo:</span>
+          <button type="button" class="simulador-btn simulador-btn-ativo" data-anos-prem="1" onclick="atualizarPremissas(null, null, 1)">1 ano</button>
+          <button type="button" class="simulador-btn" data-anos-prem="5" onclick="atualizarPremissas(null, null, 5)">5 anos</button>
+        </div>
+      </div>
+
+      <div class="simulador-grid">
+        <div class="sim-card">
+          <div style="font-size:0.78rem; text-transform:uppercase; color:var(--suave); font-weight:700;">
+            Ponto de Partida (Dados Atuais)
           </div>
-          <div style="font-size:0.85rem; color:var(--suave); margin-bottom:10px;">
-            {{ c_pess.get('1_ano', {}).get('premissas') or 'Compressão de margens e desaceleração cíclica do setor.' }}
+          <div style="font-size:1.25rem; font-weight:800; color:var(--texto); margin:8px 0 4px;">
+            Cotação: {{ sim_premissas.get('preco_atual') | moeda_br(simbolo) }}
           </div>
-          <div style="border-top:1px solid var(--borda); padding-top:8px; margin-top:8px;">
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-              <span>Preço Alvo (1 ano):</span>
-              <strong>{{ c_pess.get('1_ano', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
-              <span>Retorno Total (1 ano):</span>
-              <strong class="{{ 'pos' if ret_pess_1 >= 0 else 'neg' }}">
-                {{ ret_pess_1 | numero_br(2) }}%
-              </strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:8px; border-top:1px dashed var(--borda); padding-top:6px;">
-              <span>Preço Alvo (5 anos):</span>
-              <strong>{{ c_pess.get('5_anos', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
-              <span>Retorno Total (5 anos):</span>
-              <strong class="{{ 'pos' if ret_pess_5 >= 0 else 'neg' }}">
-                {{ ret_pess_5 | numero_br(2) }}%
-              </strong>
-            </div>
+          <div style="font-size:0.82rem; color:var(--suave);">
+            LPA (12m): {{ sim_premissas.get('lpa_atual') | moeda_br(simbolo) }} • DY (12m): {{ ((sim_premissas.get('dy_atual') or 0) * 100) | numero_br(2) }}%
           </div>
         </div>
 
-        <!-- Cenário Realista -->
-        {% set c_real = cenarios.get('realista') or cenarios.get('Realista') or {} %}
-        {% set ret_real_1 = c_real.get('1_ano', {}).get('retorno_total_pct') or 0 %}
-        {% set ret_real_5 = c_real.get('5_anos', {}).get('retorno_total_pct') or 0 %}
-        <div class="cenario-card" style="border-color:rgba(56,189,248,0.4);">
-          <div class="cenario-header">
-            <strong style="color:var(--destaque);">⚖️ Cenário Realista</strong>
-            <span class="badge badge-destaque">Caso Base</span>
+        <div class="sim-card">
+          <div style="font-size:0.78rem; text-transform:uppercase; color:var(--destaque); font-weight:700;">
+            LPA Calculado na Hipótese
           </div>
-          <div style="font-size:0.85rem; color:var(--suave); margin-bottom:10px;">
-            {{ c_real.get('1_ano', {}).get('premissas') or 'Continuidade das operações recentes e crescimento sustentável.' }}
+          <div id="prem-lpa-futuro" style="font-size:1.45rem; font-weight:800; color:var(--texto); margin:8px 0 4px;">
+            {{ sim_premissas.get('lpa_futuro') | moeda_br(simbolo) }}
           </div>
-          <div style="border-top:1px solid var(--borda); padding-top:8px; margin-top:8px;">
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-              <span>Preço Alvo (1 ano):</span>
-              <strong>{{ c_real.get('1_ano', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
-              <span>Retorno Total (1 ano):</span>
-              <strong class="{{ 'pos' if ret_real_1 >= 0 else 'neg' }}">
-                {{ ret_real_1 | numero_br(2) }}%
-              </strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:8px; border-top:1px dashed var(--borda); padding-top:6px;">
-              <span>Preço Alvo (5 anos):</span>
-              <strong>{{ c_real.get('5_anos', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
-              <span>Retorno Total (5 anos):</span>
-              <strong class="{{ 'pos' if ret_real_5 >= 0 else 'neg' }}">
-                {{ ret_real_5 | numero_br(2) }}%
-              </strong>
-            </div>
+          <div id="prem-formula-lpa" style="font-size:0.78rem; color:var(--suave);">
+            LPA atual × (1 + crescimento)^anos
           </div>
         </div>
 
-        <!-- Cenário Otimista -->
-        {% set c_otim = cenarios.get('otimista') or cenarios.get('Otimista') or {} %}
-        {% set ret_otim_1 = c_otim.get('1_ano', {}).get('retorno_total_pct') or 0 %}
-        {% set ret_otim_5 = c_otim.get('5_anos', {}).get('retorno_total_pct') or 0 %}
-        <div class="cenario-card">
-          <div class="cenario-header">
-            <strong style="color:var(--pos);">🚀 Cenário Otimista</strong>
-            <span class="badge badge-pos">Expansão</span>
+        <div class="sim-card sim-card-acao">
+          <div style="font-size:0.78rem; text-transform:uppercase; color:var(--pos); font-weight:700;">
+            Resultado da Conta Escolhida
           </div>
-          <div style="font-size:0.85rem; color:var(--suave); margin-bottom:10px;">
-            {{ c_otim.get('1_ano', {}).get('premissas') or 'Ganhos de eficiência e reclassificação de múltiplos pelo mercado.' }}
+          <div id="prem-cota-hipotese" style="font-size:1.55rem; font-weight:800; color:var(--pos); margin:8px 0 4px;">
+            {{ sim_premissas.get('valor_cota_hipotese') | moeda_br(simbolo) }}
           </div>
-          <div style="border-top:1px solid var(--borda); padding-top:8px; margin-top:8px;">
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-              <span>Preço Alvo (1 ano):</span>
-              <strong>{{ c_otim.get('1_ano', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
-              <span>Retorno Total (1 ano):</span>
-              <strong class="{{ 'pos' if ret_otim_1 >= 0 else 'neg' }}">
-                {{ ret_otim_1 | numero_br(2) }}%
-              </strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:8px; border-top:1px dashed var(--borda); padding-top:6px;">
-              <span>Preço Alvo (5 anos):</span>
-              <strong>{{ c_otim.get('5_anos', {}).get('preco_alvo') | moeda_br(simbolo) }}</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-top:4px;">
-              <span>Retorno Total (5 anos):</span>
-              <strong class="{{ 'pos' if ret_otim_5 >= 0 else 'neg' }}">
-                {{ ret_otim_5 | numero_br(2) }}%
-              </strong>
-            </div>
+          <div id="prem-proventos" style="font-size:0.8rem; color:var(--suave);">
+            Proventos acumulados no período: {{ sim_premissas.get('proventos_acumulados') | moeda_br(simbolo) }}
+          </div>
+          <div id="prem-total-hipotese" style="font-size:0.82rem; color:var(--texto); font-weight:600; margin-top:4px;">
+            Cota + proventos na hipótese: {{ sim_premissas.get('total_cota_mais_proventos') | moeda_br(simbolo) }}
           </div>
         </div>
+      </div>
+      {% else %}
+      <div class="dossie-destaque-box" style="margin-bottom:1.25rem;">
+        <strong style="color:var(--neg);">⚠️ Simulação indisponível:</strong>
+        {{ sim_premissas.get('motivo') or 'não dá para simular: a empresa não teve lucro nos últimos 12 meses' }}
+      </div>
+      {% endif %}
+
+      <div class="dossie-destaque-box" style="margin-bottom:1.25rem;">
+        <strong style="color:var(--destaque);">📌 Aviso importante:</strong>
+        Isto não é previsão nem recomendação. É só a conta das premissas que você escolheu.
       </div>
 
       <!-- Tradução Absoluta dos Múltiplos (Regra R1) -->
@@ -821,7 +764,7 @@
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
             <strong style="color:var(--destaque); font-size:0.92rem;">{{ item_m.nome }}</strong>
             <span class="badge {{ 'badge-pos' if item_m.classe_css == 'pos' else ('badge-neg' if item_m.classe_css == 'neg' else '') }}">
-              {{ item_m.situacao }}
+              Leitura: {{ item_m.leitura or item_m.situacao }}
             </span>
           </div>
           <div style="font-size:0.85rem; color:var(--texto); line-height:1.5;">
@@ -1113,9 +1056,57 @@
     document.getElementById('sim-guru-rent').textContent = formatarPct(guru.rent_pct);
   }
 
+  // Calculadora de premissas do usuário (Bloco 4)
+  const DADOS_PREMISSAS = {{ (sim_premissas or {}) | tojson }};
+  let crescPremissa = 0;
+  let plPremissa = 10;
+  let anosPremissa = 1;
+
+  function atualizarPremissas(novoCresc, novoPl, novosAnos) {
+    if (!DADOS_PREMISSAS || !DADOS_PREMISSAS.disponivel) return;
+    if (novoCresc !== null && novoCresc !== undefined) {
+      crescPremissa = Number(novoCresc);
+      document.querySelectorAll('[data-cresc]').forEach(btn => {
+        btn.classList.toggle('simulador-btn-ativo', Number(btn.getAttribute('data-cresc')) === crescPremissa);
+      });
+    }
+    if (novoPl !== null && novoPl !== undefined) {
+      plPremissa = Number(novoPl);
+      document.querySelectorAll('[data-pl]').forEach(btn => {
+        btn.classList.toggle('simulador-btn-ativo', Number(btn.getAttribute('data-pl')) === plPremissa);
+      });
+    }
+    if (novosAnos !== null && novosAnos !== undefined) {
+      anosPremissa = Number(novosAnos);
+      document.querySelectorAll('[data-anos-prem]').forEach(btn => {
+        btn.classList.toggle('simulador-btn-ativo', Number(btn.getAttribute('data-anos-prem')) === anosPremissa);
+      });
+    }
+
+    const precoAtual = Number(DADOS_PREMISSAS.preco_atual || 0);
+    const lpaAtual = Number(DADOS_PREMISSAS.lpa_atual || 0);
+    const dyAtual = Number(DADOS_PREMISSAS.dy_atual || 0);
+
+    const lpaFuturo = lpaAtual * Math.pow(1 + crescPremissa, anosPremissa);
+    const cotaHipotese = lpaFuturo * plPremissa;
+    const proventosAcum = precoAtual * dyAtual * anosPremissa;
+    const totalHipotese = cotaHipotese + proventosAcum;
+
+    const elLpa = document.getElementById('prem-lpa-futuro');
+    const elCota = document.getElementById('prem-cota-hipotese');
+    const elProv = document.getElementById('prem-proventos');
+    const elTotal = document.getElementById('prem-total-hipotese');
+
+    if (elLpa) elLpa.textContent = formatarMoeda(lpaFuturo);
+    if (elCota) elCota.textContent = formatarMoeda(cotaHipotese);
+    if (elProv) elProv.textContent = 'Proventos acumulados no período: ' + formatarMoeda(proventosAcum);
+    if (elTotal) elTotal.textContent = 'Cota + proventos na hipótese: ' + formatarMoeda(totalHipotese);
+  }
+
   // Inicializa o simulador na carga
   document.addEventListener('DOMContentLoaded', function() {
     atualizarSimulador(5000, '2y');
+    atualizarPremissas(0, 10, 1);
   });
 </script>
 {% endblock %}
