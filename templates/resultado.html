@@ -598,6 +598,7 @@
         </div>
       </div>
 
+      {% if pares_rivais %}
       <div style="overflow-x:auto; margin-bottom:1.5rem;">
         <table class="tabela">
           <thead>
@@ -611,7 +612,6 @@
               <th>ROE</th>
               <th>Margem Líquida</th>
               <th>Dív. Líq / EBITDA</th>
-              <th>Veredito Estratégico</th>
             </tr>
           </thead>
           <tbody>
@@ -631,25 +631,32 @@
                   N/D
                 {% endif %}
               </td>
-              <td><span class="badge badge-destaque">Ativo em Análise</span></td>
             </tr>
             {% for rival in pares_rivais %}
             <tr>
               <td><strong><a class="destaque" href="/analisar?ticker={{ rival.ticker }}">{{ rival.ticker }}</a></strong></td>
               <td>{{ rival.nome }}</td>
+              {% if rival.get('disponivel', True) and rival.preco is not none %}
               <td>{{ rival.preco | moeda_br('R$') }}</td>
-              <td>{{ rival.p_l | numero_br(2) if rival.p_l else 'N/D' }}</td>
-              <td>{{ rival.p_vp | numero_br(2) if rival.p_vp else 'N/D' }}</td>
+              <td>{{ rival.p_l | numero_br(2) if rival.p_l is not none else 'N/D' }}</td>
+              <td>{{ rival.p_vp | numero_br(2) if rival.p_vp is not none else 'N/D' }}</td>
               <td class="pos">{{ (rival.dy / 100.0) | percentual_br if rival.dy is not none else 'N/D' }}</td>
               <td>{{ (rival.roe / 100.0) | percentual_br if rival.roe is not none else 'N/D' }}</td>
               <td>{{ (rival.margem_liquida / 100.0) | percentual_br if rival.margem_liquida is not none else 'N/D' }}</td>
-              <td>{{ rival.divida_ebitda | numero_br(2) }}x{% if not rival.divida_ebitda %}N/D{% endif %}</td>
-              <td><span class="badge">{{ rival.destaque }}</span></td>
+              <td>{% if rival.divida_ebitda is not none %}{{ rival.divida_ebitda | numero_br(2) }}x{% else %}N/D{% endif %}</td>
+              {% else %}
+              <td colspan="7" style="color:var(--suave); font-style:italic;">{{ rival.get('status') or 'indisponível no momento' }}</td>
+              {% endif %}
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+      {% else %}
+      <div class="dossie-destaque-box" style="margin-bottom:1.5rem;">
+        Ainda não mapeamos os concorrentes desta empresa.
+      </div>
+      {% endif %}
 
       <div class="secao-titulo">🌡️ Termômetro de Sensibilidade Macroeconômica</div>
       <div class="macro-grid">

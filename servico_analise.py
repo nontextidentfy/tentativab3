@@ -1764,36 +1764,87 @@ PARES_SETORIAIS = {
     "VISC11": ["XPML11"],
 }
 
-DADOS_REFERENCIA_RIVAIS = {
-    "ITUB4": {"nome": "Itaú Unibanco", "preco": 34.20, "p_l": 8.5, "p_vp": 1.6, "dy": 7.5, "roe": 21.0, "margem_liquida": 18.5, "divida_ebitda": None, "destaque": "Maior Eficiência (ROE)"},
-    "BBDC4": {"nome": "Banco Bradesco", "preco": 14.80, "p_l": 8.1, "p_vp": 0.9, "dy": 6.8, "roe": 12.0, "margem_liquida": 11.0, "divida_ebitda": None, "destaque": "Desconto Patrimonial (P/VP)"},
-    "BBAS3": {"nome": "Banco do Brasil", "preco": 28.50, "p_l": 4.6, "p_vp": 0.8, "dy": 9.8, "roe": 21.5, "margem_liquida": 16.0, "divida_ebitda": None, "destaque": "Mais Barata por Lucro (P/L)"},
-    "SANB11": {"nome": "Santander Brasil", "preco": 27.90, "p_l": 9.2, "p_vp": 1.1, "dy": 6.5, "roe": 14.0, "margem_liquida": 12.5, "divida_ebitda": None, "destaque": "Forte em Crédito Veículos"},
-    "BPAC11": {"nome": "BTG Pactual", "preco": 36.40, "p_l": 11.2, "p_vp": 2.2, "dy": 4.5, "roe": 22.8, "margem_liquida": 23.0, "divida_ebitda": None, "destaque": "Líder Banco de Investimento"},
-    "BBSE3": {"nome": "BB Seguridade", "preco": 33.60, "p_l": 8.4, "p_vp": 5.4, "dy": 10.2, "roe": 64.0, "margem_liquida": 88.0, "divida_ebitda": None, "destaque": "Altíssimo ROE e Proventos"},
-    "CXSE3": {"nome": "Caixa Seguridade", "preco": 14.90, "p_l": 9.5, "p_vp": 3.2, "dy": 8.9, "roe": 33.0, "margem_liquida": 92.0, "divida_ebitda": None, "destaque": "Canal Exclusivo Caixa"},
-    "PETR4": {"nome": "Petrobras", "preco": 36.50, "p_l": 4.5, "p_vp": 1.2, "dy": 14.0, "roe": 26.5, "margem_liquida": 22.0, "divida_ebitda": 0.85, "destaque": "Líder Escala Pré-Sal"},
-    "PRIO3": {"nome": "Prio", "preco": 42.10, "p_l": 6.2, "p_vp": 1.8, "dy": 0.0, "roe": 30.5, "margem_liquida": 40.0, "divida_ebitda": 1.10, "destaque": "Crescimento e Eficiência Operacional"},
-    "RECV3": {"nome": "PetroReconcavo", "preco": 19.30, "p_l": 7.4, "p_vp": 1.3, "dy": 8.5, "roe": 17.5, "margem_liquida": 25.0, "divida_ebitda": 0.95, "destaque": "Líder em Campos Terrestres"},
-    "BRAV3": {"nome": "Brava Energia", "preco": 18.20, "p_l": 6.8, "p_vp": 0.9, "dy": 4.2, "roe": 14.0, "margem_liquida": 18.0, "divida_ebitda": 1.40, "destaque": "Fusão Enauta + 3R"},
-    "VBBR3": {"nome": "Vibra Energia", "preco": 24.10, "p_l": 10.5, "p_vp": 1.8, "dy": 5.5, "roe": 17.0, "margem_liquida": 4.5, "divida_ebitda": 1.90, "destaque": "Líder em Distribuição de Combustíveis"},
-    "UGPA3": {"nome": "Ultrapar", "preco": 22.80, "p_l": 12.0, "p_vp": 1.9, "dy": 4.8, "roe": 15.5, "margem_liquida": 3.8, "divida_ebitda": 1.70, "destaque": "Postos Ipiranga e Ultragaz"},
-    "VALE3": {"nome": "Vale", "preco": 61.20, "p_l": 5.8, "p_vp": 1.4, "dy": 9.5, "roe": 24.0, "margem_liquida": 21.0, "divida_ebitda": 0.70, "destaque": "Menor Custo Caixa Global"},
-    "CSNA3": {"nome": "CSN", "preco": 11.40, "p_l": 8.0, "p_vp": 0.8, "dy": 7.2, "roe": 10.5, "margem_liquida": 7.0, "divida_ebitda": 3.20, "destaque": "Mineração + Siderurgia Integrada"},
-    "GGBR4": {"nome": "Gerdau", "preco": 18.60, "p_l": 6.5, "p_vp": 0.9, "dy": 6.0, "roe": 14.0, "margem_liquida": 10.0, "divida_ebitda": 0.50, "destaque": "Baixa Alavancagem e Operação EUA"},
-    "TAEE11": {"nome": "Taesa", "preco": 34.50, "p_l": 8.8, "p_vp": 1.6, "dy": 9.5, "roe": 18.5, "margem_liquida": 48.0, "divida_ebitda": 3.40, "destaque": "Previsibilidade de Proventos"},
-    "TRPL4": {"nome": "Isa Cteep", "preco": 24.80, "p_l": 7.2, "p_vp": 1.0, "dy": 8.8, "roe": 14.0, "margem_liquida": 42.0, "divida_ebitda": 2.50, "destaque": "Transmissão com Inflação"},
-    "EGIE3": {"nome": "Engie Brasil", "preco": 42.00, "p_l": 11.5, "p_vp": 3.1, "dy": 7.0, "roe": 27.0, "margem_liquida": 30.0, "divida_ebitda": 2.10, "destaque": "Matriz 100% Renovável"},
-    "WEGE3": {"nome": "WEG", "preco": 52.00, "p_l": 32.0, "p_vp": 9.5, "dy": 1.8, "roe": 30.0, "margem_liquida": 18.0, "divida_ebitda": -0.20, "destaque": "Caixa Líquido e Crescimento Global"},
-    "EMBR3": {"nome": "Embraer", "preco": 48.50, "p_l": 18.5, "p_vp": 2.4, "dy": 1.2, "roe": 13.0, "margem_liquida": 6.5, "divida_ebitda": 1.30, "destaque": "Líder Global em Jatos Regionais"},
-    "MGLU3": {"nome": "Magazine Luiza", "preco": 10.20, "p_l": 16.0, "p_vp": 1.2, "dy": 0.0, "roe": 7.5, "margem_liquida": 1.5, "divida_ebitda": 1.80, "destaque": "E-commerce e Crédito Integrado"},
-    "LREN3": {"nome": "Lojas Renner", "preco": 16.50, "p_l": 13.5, "p_vp": 1.5, "dy": 4.5, "roe": 11.5, "margem_liquida": 8.0, "divida_ebitda": 1.10, "destaque": "Forte Geração de Caixa Varejo"},
-    "HGLG11": {"nome": "CSHG Logística FII", "preco": 160.00, "p_l": None, "p_vp": 1.02, "dy": 8.25, "roe": None, "margem_liquida": None, "divida_ebitda": None, "destaque": "Galpões Triple A"},
-    "BTLG11": {"nome": "BTG Logística FII", "preco": 101.50, "p_l": None, "p_vp": 0.99, "dy": 8.90, "roe": None, "margem_liquida": None, "divida_ebitda": None, "destaque": "Galpões em São Paulo"},
-    "MXRF11": {"nome": "Maxi Renda FII", "preco": 10.20, "p_l": None, "p_vp": 1.01, "dy": 11.80, "roe": None, "margem_liquida": None, "divida_ebitda": None, "destaque": "Maior Base de Cotistas"},
-}
+def _nome_catalogo_ou_ticker(ticker: str) -> str:
+    tk = (ticker or "").upper().strip()
+    for cod, nome in CATALOGO_B3:
+        if cod == tk:
+            return nome
+    return tk
 
-def obter_comparativo_setorial(ticker: str, setor: str = "") -> list[dict]:
+
+def _coletar_rival_yfinance(rival: str) -> dict:
+    """
+    Coleta indicadores reais do rival via yfinance em instância própria de yf.Ticker (Regra R8).
+    Em caso de falha ou ausência de cotação, marca a linha como 'indisponível no momento'.
+    """
+    simbolo_sa = f"{rival}.SA"
+    nome_padrao = _nome_catalogo_ou_ticker(rival)
+    indisponivel = {
+        "ticker": rival,
+        "nome": nome_padrao,
+        "disponivel": False,
+        "status": "indisponível no momento",
+        "preco": None,
+        "p_l": None,
+        "p_vp": None,
+        "dy": None,
+        "roe": None,
+        "margem_liquida": None,
+        "divida_ebitda": None,
+    }
+    try:
+        info = yf.Ticker(simbolo_sa).info or {}
+        preco = (
+            numero(info.get("currentPrice"))
+            or numero(info.get("regularMarketPrice"))
+            or numero(info.get("previousClose"))
+        )
+        if not preco or preco <= 0:
+            return indisponivel
+
+        nome = (info.get("shortName") or info.get("longName") or nome_padrao)[:120]
+        p_l = arredondar(info.get("trailingPE"))
+        p_vp = arredondar(info.get("priceToBook"))
+
+        div_rate = numero(info.get("trailingAnnualDividendRate")) or numero(info.get("dividendRate"))
+        dy_raw = numero(info.get("trailingAnnualDividendYield")) or numero(info.get("dividendYield"))
+        if div_rate is not None and div_rate >= 0:
+            dy_pct = round((div_rate / preco) * 100.0, 2)
+        elif dy_raw is not None and dy_raw >= 0:
+            dy_pct = round(dy_raw * 100.0 if dy_raw <= 1.0 else dy_raw, 2)
+        else:
+            dy_pct = None
+
+        roe_raw = numero(info.get("returnOnEquity"))
+        roe_pct = round(roe_raw * 100.0, 2) if roe_raw is not None else None
+
+        margem_raw = numero(info.get("profitMargins"))
+        margem_pct = round(margem_raw * 100.0, 2) if margem_raw is not None else None
+
+        div_total = numero(info.get("totalDebt"))
+        caixa_total = numero(info.get("totalCash"))
+        ebitda = numero(info.get("ebitda"))
+        div_liq = (div_total - caixa_total) if (div_total is not None and caixa_total is not None) else None
+        div_ebitda = round(div_liq / ebitda, 2) if (div_liq is not None and ebitda and ebitda > 0) else None
+
+        return {
+            "ticker": rival,
+            "nome": nome,
+            "disponivel": True,
+            "status": "ok",
+            "preco": round(float(preco), 2),
+            "p_l": p_l,
+            "p_vp": p_vp,
+            "dy": dy_pct,
+            "roe": roe_pct,
+            "margem_liquida": margem_pct,
+            "divida_ebitda": div_ebitda,
+        }
+    except Exception:
+        return indisponivel
+
+
+def obter_comparativo_setorial(ticker: str, setor: str = "", timeout: float = 5.0) -> list[dict]:
     tk = (ticker or "").upper().strip()
     lista_pares = PARES_SETORIAIS.get(tk)
     if not lista_pares:
@@ -1804,28 +1855,34 @@ def obter_comparativo_setorial(ticker: str, setor: str = "") -> list[dict]:
                 break
 
     if not lista_pares:
-        lista_pares = ["ITUB4", "VALE3", "PETR4"]
+        return []
 
-    resultado = []
-    for rival in lista_pares[:3]:
-        ref = DADOS_REFERENCIA_RIVAIS.get(rival)
-        if ref:
-            item = dict(ref)
-            item["ticker"] = rival
-        else:
-            item = {
-                "ticker": rival,
-                "nome": rival,
-                "preco": 30.0,
-                "p_l": 8.0,
-                "p_vp": 1.2,
-                "dy": 6.5,
-                "roe": 15.0,
-                "margem_liquida": 12.0,
-                "divida_ebitda": 1.5,
-                "destaque": "Concorrente Direto B3",
-            }
-        resultado.append(item)
+    rivais = [r for r in lista_pares if r != tk][:3]
+    if not rivais:
+        return []
+
+    resultado: list[dict] = []
+    with ThreadPoolExecutor(max_workers=len(rivais)) as executor:
+        futuros = [(rival, executor.submit(_coletar_rival_yfinance, rival)) for rival in rivais]
+        for rival, fut in futuros:
+            try:
+                resultado.append(fut.result(timeout=timeout))
+            except Exception:
+                resultado.append(
+                    {
+                        "ticker": rival,
+                        "nome": _nome_catalogo_ou_ticker(rival),
+                        "disponivel": False,
+                        "status": "indisponível no momento",
+                        "preco": None,
+                        "p_l": None,
+                        "p_vp": None,
+                        "dy": None,
+                        "roe": None,
+                        "margem_liquida": None,
+                        "divida_ebitda": None,
+                    }
+                )
     return resultado
 
 
@@ -2266,7 +2323,7 @@ def garantir_blocos_didaticos(dados: dict) -> dict:
             div_12m,
             historico_mensal=dados.get("Historico_Mensal_5a"),
         )
-    if "Pares_Setoriais" not in dados or not dados["Pares_Setoriais"]:
+    if "Pares_Setoriais" not in dados or dados["Pares_Setoriais"] is None:
         dados["Pares_Setoriais"] = obter_comparativo_setorial(ticker, str(info.get("sector") or ""))
     if "Termometro_Macro" not in dados or not dados["Termometro_Macro"]:
         dados["Termometro_Macro"] = calcular_termometro_macro(ticker, str(info.get("sector") or ""))

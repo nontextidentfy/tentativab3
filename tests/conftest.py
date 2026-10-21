@@ -56,7 +56,26 @@ def preparar_banco_e_mocks(monkeypatch):
                 dados.append({"data": f"01/{m:02d}/{a}", "valor": "0.55"})
         return dados
 
+    class _TickerPadraoMock:
+        def __init__(self, simbolo):
+            self.simbolo = str(simbolo or "")
+            tk = self.simbolo.replace(".SA", "")
+            self.info = {
+                "shortName": f"Empresa {tk}",
+                "longName": f"Empresa {tk} S.A.",
+                "currentPrice": 28.50,
+                "trailingPE": 7.8,
+                "priceToBook": 1.25,
+                "dividendYield": 0.065,
+                "returnOnEquity": 0.16,
+                "profitMargins": 0.14,
+                "totalDebt": 2_000_000_000.0,
+                "totalCash": 500_000_000.0,
+                "ebitda": 1_000_000_000.0,
+            }
+
     monkeypatch.setattr(svc.yf, "Search", _BuscaFalsaYahoo)
+    monkeypatch.setattr(svc.yf, "Ticker", _TickerPadraoMock)
     monkeypatch.setattr(svc, "extrair_raio_x_b3", _extrair_falso)
     monkeypatch.setattr(svc, "gerar_relatorio_ia", _relatorio_falso)
     monkeypatch.setattr(svc, "_consultar_sgs_bcb_http", _sgs_falso, raising=False)

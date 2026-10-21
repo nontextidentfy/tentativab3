@@ -1061,3 +1061,53 @@ def test_passo1_falha_api_bcb_exibe_aviso_aproximacao_taxa_fixa(client: TestClie
     assert resp.status_code == 200
     assert "aproximação com taxa fixa de" in resp.text.lower()
 
+
+def test_passo2_sem_dicionario_fixo_rivais():
+    """Passo 2: O módulo servico_analise não deve mais ter o dicionário fixo DADOS_REFERENCIA_RIVAIS."""
+    assert not hasattr(svc, "DADOS_REFERENCIA_RIVAIS")
+
+
+def test_passo2_rival_com_falha_vira_indisponivel(monkeypatch):
+    """Passo 2: Se a busca de um rival no yfinance falhar, a linha dele mostra 'indisponível no momento'."""
+    class _TickerRivalMock:
+        def __init__(self, simbolo):
+            self.simbolo = simbolo
+
+        @property
+        def info(self):
+            if self.simbolo.startswith("PRIO3"):
+                raise RuntimeError("Falha de rede no rival PRIO3")
+            return {
+                "shortName": f"Empresa {self.simbolo}",
+                "currentPrice": 25.40,
+                "trailingPE": 7.5,
+                "priceToBook": 1.3,
+                "dividendYield": 0.06,
+                "returnOnEquity": 0.18,
+                "profitMargins": 0.14,
+            }
+
+    monkeypatch.setattr(svc.yf, "Ticker", _TickerRivalMock)
+    pares = svc.obter_comparativo_setorial("PETR4")
+    assert len(pares) >= 2
+    prio = next(r for r in pares if r["ticker"] == "PRIO3")
+    assert prio["disponivel"] is False
+    assert "indisponível no momento" in prio["status"].lower()
+    assert prio["preco"] is None
+    assert "destaque" not in prio
+
+
+def test_passo2_ticker_sem_pares_mostra_frase(client: TestClient, sessao_db):
+    """Passo 2: Sem rivais mapeados para o ticker, o bloco diz 'ainda não mapeamos os concorrentes desta empresa'."""
+    pares = svc.obter_comparativo_setorial("TOTS3")
+    assert pares == []
+
+    u = _criar_usuario_teste(sessao_db, email="passo2_user@teste.com", plano="pro")
+    client.cookies.update(_criar_cookie_autenticado(u.id))
+    resp = client.get("/analisar?ticker=TOTS3")
+    assert resp.status_code == 200
+    assert "ainda não mapeamos os concorrentes desta empresa" in resp.text.lower()
+    assert "Veredito Estratégico" not in resp.text
+    client.cookies.clear()
+
+
