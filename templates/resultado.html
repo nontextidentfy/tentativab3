@@ -467,34 +467,55 @@
     </div>
   </div>
 
+  {% set padrao_2y = (sim.get('matriz') or {}).get('5000', {}).get('2y') or {} %}
+  {% set acao_2y = padrao_2y.get('acao') or {} %}
+  {% set rent_2y = acao_2y.get('rent_pct') or 0 %}
+  {% set cdi_2y = padrao_2y.get('cdi') or {} %}
+  {% set poup_2y = padrao_2y.get('poupanca') or {} %}
+  {% set guru_2y = padrao_2y.get('guru') or {} %}
+
   <div class="simulador-grid">
     <div class="sim-card sim-card-acao">
       <div style="font-size:0.75rem; text-transform:uppercase; color:var(--pos); font-weight:700;">
-        📈 Ação Real ({{ dados.Identificacao.Ticker }})
+        📈 Histórico Factual ({{ dados.Identificacao.Ticker }})
       </div>
-      <div id="sim-acao-total" style="font-size:1.6rem; font-weight:800; color:var(--pos); margin:6px 0;">
-        R$ 0,00
+      {% if acao_2y.get('disponivel') %}
+      <div id="sim-acao-total" style="font-size:1.6rem; font-weight:800; color:{{ 'var(--pos)' if rent_2y >= 0 else 'var(--neg)' }}; margin:6px 0;">
+        {{ acao_2y.get('total') | moeda_br('R$') }}
       </div>
       <div style="margin-bottom:6px;">
-        <span id="sim-acao-rent" class="badge badge-pos">+0,00%</span>
+        <span id="sim-acao-rent" class="badge {{ 'badge-pos' if rent_2y >= 0 else 'badge-neg' }}">
+          {{ '+' if rent_2y >= 0 else '' }}{{ rent_2y | numero_br(2) }}%
+        </span>
       </div>
-      <div id="sim-acao-detalhe" style="font-size:0.78rem; color:var(--suave);">
-        Proventos: R$ 0,00 • Cotação: R$ 0,00
+      <div id="sim-acao-detalhe" style="font-size:0.78rem; color:var(--suave); line-height:1.45;">
+        {{ acao_2y.get('frase') }}
       </div>
+      {% else %}
+      <div id="sim-acao-total" style="font-size:1.15rem; font-weight:700; color:var(--suave); margin:8px 0;">
+        {{ acao_2y.get('mensagem') or 'listada há menos de 2 anos' }}
+      </div>
+      <div style="margin-bottom:6px;">
+        <span id="sim-acao-rent" class="badge">Histórico curto</span>
+      </div>
+      <div id="sim-acao-detalhe" style="font-size:0.78rem; color:var(--suave); line-height:1.45;">
+        {{ acao_2y.get('mensagem') or 'listada há menos de 2 anos' }}
+      </div>
+      {% endif %}
     </div>
 
     <div class="sim-card">
       <div style="font-size:0.75rem; text-transform:uppercase; color:var(--destaque); font-weight:700;">
-        🏦 CDI Líquido (10,5% a.a.)
+        🏦 CDI Líquido no Período
       </div>
       <div id="sim-cdi-total" style="font-size:1.6rem; font-weight:800; color:var(--texto); margin:6px 0;">
-        R$ 0,00
+        {{ cdi_2y.get('total') | moeda_br('R$') }}
       </div>
       <div style="margin-bottom:6px;">
-        <span id="sim-cdi-rent" class="badge badge-destaque">+0,00%</span>
+        <span id="sim-cdi-rent" class="badge badge-destaque">+{{ cdi_2y.get('rent_pct') | numero_br(2) }}%</span>
       </div>
-      <div style="font-size:0.78rem; color:var(--apagado);">
-        Renda fixa com IR regressivo deduzido
+      <div id="sim-cdi-aviso" style="font-size:0.78rem; color:var(--apagado);">
+        {{ cdi_2y.get('aviso') or sim.get('aviso_cdi') or 'Série 12 do Banco Central' }}
       </div>
     </div>
 
@@ -503,25 +524,25 @@
         🐷 Caderneta de Poupança
       </div>
       <div id="sim-poup-total" style="font-size:1.6rem; font-weight:800; color:var(--texto); margin:6px 0;">
-        R$ 0,00
+        {{ poup_2y.get('total') | moeda_br('R$') }}
       </div>
       <div style="margin-bottom:6px;">
-        <span id="sim-poup-rent" class="badge">+0,00%</span>
+        <span id="sim-poup-rent" class="badge">+{{ poup_2y.get('rent_pct') | numero_br(2) }}%</span>
       </div>
-      <div style="font-size:0.78rem; color:var(--apagado);">
-        Rendimento histórico isento de IR (6,5% a.a.)
+      <div id="sim-poup-aviso" style="font-size:0.78rem; color:var(--apagado);">
+        {{ poup_2y.get('aviso') or sim.get('aviso_poupanca') or 'Série 195 do Banco Central' }}
       </div>
     </div>
 
     <div class="sim-card sim-card-guru">
       <div style="font-size:0.75rem; text-transform:uppercase; color:var(--neg); font-weight:700;">
-        🚨 Mito do Guru ("5% a.m.")
+        🚨 Mito do Guru (5% ao mês)
       </div>
       <div id="sim-guru-total" style="font-size:1.6rem; font-weight:800; color:var(--neg); margin:6px 0;">
-        R$ 0,00
+        {{ guru_2y.get('total') | moeda_br('R$') }}
       </div>
       <div style="margin-bottom:6px;">
-        <span id="sim-guru-rent" class="badge badge-neg">+0,00%</span>
+        <span id="sim-guru-rent" class="badge badge-neg">+{{ guru_2y.get('rent_pct') | numero_br(2) }}%</span>
         <span class="badge badge-neg">ILUSÃO</span>
       </div>
       <div style="font-size:0.78rem; color:var(--apagado);">
@@ -1043,21 +1064,43 @@
     const dadosAporte = DADOS_SIMULADOR[String(aporteAtual)] || DADOS_SIMULADOR[aporteAtual] || {};
     const dadosPrazo = dadosAporte[prazoAtual] || {};
 
-    const acao = dadosPrazo.acao || { total: 0, rent_pct: 0, dividendos: 0, patrimonio: 0 };
-    const cdi = dadosPrazo.cdi || { total: 0, rent_pct: 0 };
-    const poup = dadosPrazo.poupanca || { total: 0, rent_pct: 0 };
+    const acao = dadosPrazo.acao || { disponivel: false, mensagem: 'Indisponível' };
+    const cdi = dadosPrazo.cdi || { total: 0, rent_pct: 0, aviso: '' };
+    const poup = dadosPrazo.poupanca || { total: 0, rent_pct: 0, aviso: '' };
     const guru = dadosPrazo.guru || { total: 0, rent_pct: 0 };
 
-    document.getElementById('sim-acao-total').textContent = formatarMoeda(acao.total);
-    document.getElementById('sim-acao-rent').textContent = formatarPct(acao.rent_pct);
-    document.getElementById('sim-acao-detalhe').textContent =
-      'Proventos: ' + formatarMoeda(acao.dividendos) + ' • Cotação: ' + formatarMoeda(acao.patrimonio);
+    const elTotal = document.getElementById('sim-acao-total');
+    const elRent = document.getElementById('sim-acao-rent');
+    const elDetalhe = document.getElementById('sim-acao-detalhe');
+
+    if (acao.disponivel) {
+      elTotal.textContent = formatarMoeda(acao.total);
+      elTotal.style.fontSize = '1.6rem';
+      elTotal.style.color = acao.rent_pct >= 0 ? 'var(--pos)' : 'var(--neg)';
+      elRent.textContent = formatarPct(acao.rent_pct);
+      elRent.className = acao.rent_pct >= 0 ? 'badge badge-pos' : 'badge badge-neg';
+      elDetalhe.textContent = acao.frase || (
+        'Proventos: ' + formatarMoeda(acao.dividendos) + ' • Cotação: ' + formatarMoeda(acao.patrimonio)
+      );
+    } else {
+      const msgCurto = acao.mensagem || 'listada há menos de ' + String(prazoAtual).replace('y', '') + ' anos';
+      elTotal.textContent = msgCurto;
+      elTotal.style.fontSize = '1.15rem';
+      elTotal.style.color = 'var(--suave)';
+      elRent.textContent = 'Histórico curto';
+      elRent.className = 'badge';
+      elDetalhe.textContent = msgCurto;
+    }
 
     document.getElementById('sim-cdi-total').textContent = formatarMoeda(cdi.total);
     document.getElementById('sim-cdi-rent').textContent = formatarPct(cdi.rent_pct);
+    const elCdiAviso = document.getElementById('sim-cdi-aviso');
+    if (elCdiAviso && cdi.aviso) elCdiAviso.textContent = cdi.aviso;
 
     document.getElementById('sim-poup-total').textContent = formatarMoeda(poup.total);
     document.getElementById('sim-poup-rent').textContent = formatarPct(poup.rent_pct);
+    const elPoupAviso = document.getElementById('sim-poup-aviso');
+    if (elPoupAviso && poup.aviso) elPoupAviso.textContent = poup.aviso;
 
     document.getElementById('sim-guru-total').textContent = formatarMoeda(guru.total);
     document.getElementById('sim-guru-rent').textContent = formatarPct(guru.rent_pct);

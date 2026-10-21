@@ -22,6 +22,8 @@ def preparar_banco_e_mocks(monkeypatch):
     banco.Base.metadata.drop_all(bind=banco.engine)
     banco.Base.metadata.create_all(bind=banco.engine)
     svc._CACHE_BUSCA.clear()
+    if hasattr(svc, "_CACHE_SGS_BCB"):
+        svc._CACHE_SGS_BCB.clear()
 
     # Limpa o estado do rate limiter entre testes
     if hasattr(main.limiter, "_storage") and hasattr(main.limiter._storage, "reset"):
@@ -40,9 +42,24 @@ def preparar_banco_e_mocks(monkeypatch):
     def _relatorio_falso(_dados: dict):
         return RELATORIO_PADRAO_MD, "gemini-2.5-flash", True
 
+    def _sgs_falso(codigo_serie: int, data_inicial: str = "", data_final: str = "", timeout: float = 5.0):
+        # Retorna 60 meses sintéticos para evitar chamadas HTTP externas nos testes
+        dados = []
+        for i in range(60):
+            m = (i % 12) + 1
+            a = 2021 + (i // 12)
+            if codigo_serie == 12:
+                # 21 dias úteis no mês com taxa diária ~0.04%
+                for d in range(1, 22):
+                    dados.append({"data": f"{d:02d}/{m:02d}/{a}", "valor": "0.039"})
+            else:
+                dados.append({"data": f"01/{m:02d}/{a}", "valor": "0.55"})
+        return dados
+
     monkeypatch.setattr(svc.yf, "Search", _BuscaFalsaYahoo)
     monkeypatch.setattr(svc, "extrair_raio_x_b3", _extrair_falso)
     monkeypatch.setattr(svc, "gerar_relatorio_ia", _relatorio_falso)
+    monkeypatch.setattr(svc, "_consultar_sgs_bcb_http", _sgs_falso, raising=False)
     yield
 
 

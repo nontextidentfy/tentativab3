@@ -12,7 +12,27 @@ RELATORIO_PADRAO_MD = (
     "Histórico regular de distribuição. Este diagnóstico é informativo e não constitui recomendação de compra ou venda."
 )
 
+def _gerar_historico_mensal_fixture(preco_base: float, div_mensal: float, meses: int = 60) -> list[dict]:
+    historico = []
+    ano_ini = 2021
+    mes_ini = 11
+    for i in range(meses):
+        m = ((mes_ini - 1 + i) % 12) + 1
+        a = ano_ini + ((mes_ini - 1 + i) // 12)
+        fech = round(preco_base * (0.75 + (0.25 * (i / max(1, meses - 1)))), 4)
+        historico.append(
+            {
+                "mes_ano": f"{m:02d}/{a}",
+                "data_iso": f"{a}-{m:02d}-01",
+                "fechamento": fech,
+                "dividendos": round(div_mensal, 4),
+            }
+        )
+    return historico
+
+
 FIXTURE_ACAO_PETR4 = {
+    "Historico_Mensal_5a": _gerar_historico_mensal_fixture(36.50, 0.425, 60),
     "Metadados": {
         "moeda_cotacao": "BRL",
         "simbolo": "R$",
@@ -129,6 +149,7 @@ FIXTURE_ACAO_PETR4 = {
 }
 
 FIXTURE_FII_HGLG11 = {
+    "Historico_Mensal_5a": _gerar_historico_mensal_fixture(160.00, 1.10, 60),
     "Metadados": {
         "moeda_cotacao": "BRL",
         "simbolo": "R$",

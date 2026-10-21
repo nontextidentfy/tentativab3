@@ -12,6 +12,7 @@ import os
 import re
 import time
 import unicodedata
+import urllib.request
 import zoneinfo
 import pandas as pd
 import yfinance as yf
@@ -758,6 +759,53 @@ def _coletar_historico_seguro(ativo):
         return None
 
 
+def _coletar_historico_mensal_5a(ativo) -> list[dict]:
+    """
+    Carrega até 5 anos de histórico mensal (fechamentos e dividendos por mês)
+    em um objeto yf.Ticker isolado para alimentar o Simulador Realidade vs. Guru.
+    """
+    try:
+        try:
+            hist = ativo.history(period="5y", interval="1mo", auto_adjust=False)
+        except TypeError:
+            hist = ativo.history(period="5y")
+        if hist is None or hist.empty:
+            return []
+
+        divs_por_mes: dict[str, float] = {}
+        if "Dividends" not in hist.columns:
+            try:
+                s_div = getattr(ativo, "dividends", None)
+                if s_div is not None and not s_div.empty:
+                    for dt_idx, val_d in s_div.items():
+                        chave_m = dt_idx.strftime("%m/%Y")
+                        divs_por_mes[chave_m] = divs_por_mes.get(chave_m, 0.0) + float(val_d or 0.0)
+            except Exception:
+                pass
+
+        registros = []
+        for data_idx, linha in hist.iterrows():
+            fech = numero(linha.get("Close"))
+            if fech is None or fech <= 0:
+                continue
+            mes_ano = data_idx.strftime("%m/%Y")
+            if "Dividends" in hist.columns:
+                div_mes = numero(linha.get("Dividends")) or 0.0
+            else:
+                div_mes = divs_por_mes.get(mes_ano, 0.0)
+            registros.append(
+                {
+                    "mes_ano": mes_ano,
+                    "data_iso": data_idx.strftime("%Y-%m-%d"),
+                    "fechamento": round(float(fech), 4),
+                    "dividendos": round(float(div_mes), 4),
+                }
+            )
+        return registros
+    except Exception:
+        return []
+
+
 
 # ===========================================================================
 # BLOCO 1 (Dossiê Aberto): Catálogo Curado de Perfis Didáticos da B3
@@ -1364,9 +1412,144 @@ def obter_dossie_didatico(ticker: str, info: dict | None = None, dados: dict | N
 
 
 # ===========================================================================
-# BLOCO 2 (Dossiê Aberto): Simulador Realidade vs. Guru (Anti-Ilusão)
+# BLOCO 2 (Dossiê Aberto): Simulador Realidade vs. Guru (Histórico Factual + SGS BCB)
 # ===========================================================================
-def calcular_simulador_realidade_vs_guru(ticker: str, preco_atual: float, div_12m: float) -> dict:
+_CACHE_SGS_BCB: dict[str, tuple[float, list[dict]]] = {}
+_CACHE_SGS_TTL_SEGUNDOS = 24 * 3600
+TAXA_FIXA_CDI_AA = 0.105
+TAXA_FIXA_POUPANCA_AA = 0.065
+
+
+def _consultar_sgs_bcb_http(
+    codigo_serie: int, data_inicial: str, data_final: str, timeout: float = 5.0
+) -> list[dict]:
+    url = (
+        f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{int(codigo_serie)}/dados"
+        f"?formato=json&dataInicial={data_inicial}&dataFinal={data_final}"
+    )
+    req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "InvestidorIA/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        corpo = resp.read().decode("utf-8")
+        dados = json.loads(corpo)
+        return dados if isinstance(dados, list) else []
+
+
+def obter_serie_sgs_bcb(codigo_serie: int, anos: int = 5, timeout: float = 5.0) -> list[dict] | None:
+    """
+    Consulta a API gratuita do Banco Central (SGS) para a série informada
+    (12 = CDI diário, 195 = Poupança), com cache de 24h em memória e timeout de 5s.
+    """
+    agora_ts = time.time()
+    chave = f"{codigo_serie}:{anos}"
+    em_cache = _CACHE_SGS_BCB.get(chave)
+    if em_cache and (agora_ts - em_cache[0]) < _CACHE_SGS_TTL_SEGUNDOS:
+        return em_cache[1]
+
+    hoje = agora_brasilia().date()
+    dt_ini = hoje - datetime.timedelta(days=int(anos * 365.25) + 15)
+    try:
+        dados = _consultar_sgs_bcb_http(
+            codigo_serie,
+            dt_ini.strftime("%d/%m/%Y"),
+            hoje.strftime("%d/%m/%Y"),
+            timeout=timeout,
+        )
+        if not dados:
+            return None
+        _CACHE_SGS_BCB[chave] = (agora_ts, dados)
+        return dados
+    except Exception:
+        return None
+
+
+def _acumular_cdi_sgs_ou_fixo(c0: float, anos: int, serie_cdi_5a: list[dict] | None) -> dict:
+    aliquota_ir = 0.175 if anos == 1 else 0.150
+    if serie_cdi_5a:
+        try:
+            qtd_dias = anos * 252
+            fatia = serie_cdi_5a[-qtd_dias:] if len(serie_cdi_5a) >= qtd_dias else serie_cdi_5a
+            fator_bruto = 1.0
+            for item in fatia:
+                v_str = str(item.get("valor", "0")).replace(",", ".")
+                taxa_dia = float(v_str) / 100.0
+                fator_bruto *= 1.0 + taxa_dia
+            ganho_bruto = c0 * (fator_bruto - 1.0)
+            ganho_liq = ganho_bruto * (1.0 - aliquota_ir)
+            total_cdi = c0 + ganho_liq
+            rent_cdi = ((total_cdi - c0) / c0) * 100.0 if c0 > 0 else 0.0
+            return {
+                "total": round(total_cdi, 2),
+                "rent_pct": round(rent_cdi, 2),
+                "aproximacao": False,
+                "fonte": "SGS/BCB (série 12)",
+                "aviso": f"Série 12 do Banco Central (IR regressivo de {br(aliquota_ir * 100, 1)}% deduzido)",
+            }
+        except Exception:
+            pass
+
+    ganho_bruto_cdi = c0 * (((1.0 + TAXA_FIXA_CDI_AA) ** anos) - 1.0)
+    ganho_liq_cdi = ganho_bruto_cdi * (1.0 - aliquota_ir)
+    total_cdi = c0 + ganho_liq_cdi
+    rent_cdi = ((total_cdi - c0) / c0) * 100.0 if c0 > 0 else 0.0
+    aviso_fixo = f"aproximação com taxa fixa de {br(TAXA_FIXA_CDI_AA * 100, 1)}% a.a."
+    return {
+        "total": round(total_cdi, 2),
+        "rent_pct": round(rent_cdi, 2),
+        "aproximacao": True,
+        "fonte": "taxa_fixa",
+        "aviso": aviso_fixo,
+    }
+
+
+def _acumular_poupanca_sgs_ou_fixo(c0: float, anos: int, serie_poup_5a: list[dict] | None) -> dict:
+    if serie_poup_5a:
+        try:
+            por_mes: dict[str, float] = {}
+            ordem_meses: list[str] = []
+            for item in serie_poup_5a:
+                dt_txt = str(item.get("data", ""))
+                partes = dt_txt.split("/")
+                chave_m = f"{partes[1]}/{partes[2]}" if len(partes) == 3 else dt_txt
+                v_str = str(item.get("valor", "0")).replace(",", ".")
+                if chave_m not in por_mes:
+                    ordem_meses.append(chave_m)
+                por_mes[chave_m] = float(v_str) / 100.0
+            meses_alvo = anos * 12
+            chaves_recorte = ordem_meses[-meses_alvo:]
+            if chaves_recorte:
+                fator_poup = 1.0
+                for ch in chaves_recorte:
+                    fator_poup *= 1.0 + por_mes[ch]
+                total_poup = c0 * fator_poup
+                rent_poup = ((total_poup - c0) / c0) * 100.0 if c0 > 0 else 0.0
+                return {
+                    "total": round(total_poup, 2),
+                    "rent_pct": round(rent_poup, 2),
+                    "aproximacao": False,
+                    "fonte": "SGS/BCB (série 195)",
+                    "aviso": "Série 195 do Banco Central (isento de IR)",
+                }
+        except Exception:
+            pass
+
+    total_poup = c0 * ((1.0 + TAXA_FIXA_POUPANCA_AA) ** anos)
+    rent_poup = ((total_poup - c0) / c0) * 100.0 if c0 > 0 else 0.0
+    aviso_fixo = f"aproximação com taxa fixa de {br(TAXA_FIXA_POUPANCA_AA * 100, 1)}% a.a."
+    return {
+        "total": round(total_poup, 2),
+        "rent_pct": round(rent_poup, 2),
+        "aproximacao": True,
+        "fonte": "taxa_fixa",
+        "aviso": aviso_fixo,
+    }
+
+
+def calcular_simulador_realidade_vs_guru(
+    ticker: str,
+    preco_atual: float,
+    div_12m: float = 0.0,
+    historico_mensal: list[dict] | None = None,
+) -> dict:
     try:
         p0 = float(preco_atual) if preco_atual is not None else 0.0
     except (TypeError, ValueError):
@@ -1375,6 +1558,15 @@ def calcular_simulador_realidade_vs_guru(ticker: str, preco_atual: float, div_12
         d12 = float(div_12m) if div_12m is not None else 0.0
     except (TypeError, ValueError):
         d12 = 0.0
+
+    hist_valido = [
+        m
+        for m in (historico_mensal or [])
+        if isinstance(m, dict) and (numero(m.get("fechamento")) or 0) > 0
+    ]
+
+    serie_cdi_5a = obter_serie_sgs_bcb(12, anos=5, timeout=5.0)
+    serie_poup_5a = obter_serie_sgs_bcb(195, anos=5, timeout=5.0)
 
     opcoes_aporte = [1000, 5000, 10000]
     prazos = ["1y", "2y", "5y"]
@@ -1386,55 +1578,63 @@ def calcular_simulador_realidade_vs_guru(ticker: str, preco_atual: float, div_12
         sub = {}
         for t in prazos_anos:
             prazo_key = f"{t}y"
-            # 1. Ação Real na B3
-            if p0 > 0:
-                q0 = c0 / p0
-                total_div_unit = sum(d12 * ((1.0 + 0.03) ** k) for k in range(t))
-                proventos_total = q0 * total_div_unit
-                preco_final = p0 * ((1.0 + 0.05) ** t)
-                patrimonio_acoes = q0 * preco_final
-                total_acao = patrimonio_acoes + proventos_total
-                rent_acao = ((total_acao - c0) / c0) * 100.0
+            meses_necessarios = t * 12
+
+            if len(hist_valido) >= meses_necessarios:
+                fatia = hist_valido[-meses_necessarios:]
+                ponto_ini = fatia[0]
+                cotacao_ini = float(ponto_ini["fechamento"])
+                mes_ano_ini = str(ponto_ini.get("mes_ano") or "")
+                cotacao_fim = p0 if p0 > 0 else float(fatia[-1]["fechamento"])
+                cotas = c0 / cotacao_ini
+                div_por_cota_periodo = sum(float(numero(m.get("dividendos")) or 0.0) for m in fatia)
+                proventos_total = round(cotas * div_por_cota_periodo, 2)
+                patrimonio_acoes = round(cotas * cotacao_fim, 2)
+                total_acao = round(patrimonio_acoes + proventos_total, 2)
+                rent_acao = round(((total_acao - c0) / c0) * 100.0, 2)
+                frase = (
+                    f"Se você tivesse investido R$ {inteiro_br(c0)} em {mes_ano_ini}, "
+                    f"hoje teria R$ {br(total_acao, 2)}, sendo R$ {br(proventos_total, 2)} em proventos."
+                )
+                bloco_acao = {
+                    "disponivel": True,
+                    "total": total_acao,
+                    "rent_pct": rent_acao,
+                    "dividendos": proventos_total,
+                    "patrimonio": patrimonio_acoes,
+                    "cotas": round(cotas, 4),
+                    "cotacao_inicial": round(cotacao_ini, 2),
+                    "mes_ano_inicio": mes_ano_ini,
+                    "mensagem": "",
+                    "frase": frase,
+                }
             else:
-                total_acao = c0
-                rent_acao = 0.0
-                proventos_total = 0.0
-                patrimonio_acoes = c0
+                msg_curto = f"listada há menos de {t} anos"
+                bloco_acao = {
+                    "disponivel": False,
+                    "total": None,
+                    "rent_pct": None,
+                    "dividendos": None,
+                    "patrimonio": None,
+                    "cotas": None,
+                    "cotacao_inicial": None,
+                    "mes_ano_inicio": None,
+                    "mensagem": msg_curto,
+                    "frase": msg_curto,
+                }
 
-            # 2. Poupança (6.5% a.a. isento)
-            i_poup = 0.065
-            total_poup = c0 * ((1.0 + i_poup) ** t)
-            rent_poup = ((total_poup - c0) / c0) * 100.0
+            bloco_cdi = _acumular_cdi_sgs_ou_fixo(c0, t, serie_cdi_5a)
+            bloco_poup = _acumular_poupanca_sgs_ou_fixo(c0, t, serie_poup_5a)
 
-            # 3. CDI Líquido (10.5% a.a. bruto com tabela regressiva IR)
-            i_cdi = 0.105
-            ganho_bruto_cdi = c0 * (((1.0 + i_cdi) ** t) - 1.0)
-            aliquota_ir = 0.175 if t == 1 else 0.150
-            ganho_liq_cdi = ganho_bruto_cdi * (1.0 - aliquota_ir)
-            total_cdi = c0 + ganho_liq_cdi
-            rent_cdi = ((total_cdi - c0) / c0) * 100.0
-
-            # 4. O Mito do Guru ("5% ao mês garantido" = (1.05)^(12*t))
             meses = 12 * t
             fator_guru = (1.05) ** meses
             total_guru = c0 * fator_guru
             rent_guru = (fator_guru - 1.0) * 100.0
 
             bloco_prazo = {
-                "acao": {
-                    "total": round(total_acao, 2),
-                    "rent_pct": round(rent_acao, 2),
-                    "dividendos": round(proventos_total, 2),
-                    "patrimonio": round(patrimonio_acoes, 2),
-                },
-                "cdi": {
-                    "total": round(total_cdi, 2),
-                    "rent_pct": round(rent_cdi, 2),
-                },
-                "poupanca": {
-                    "total": round(total_poup, 2),
-                    "rent_pct": round(rent_poup, 2),
-                },
+                "acao": bloco_acao,
+                "cdi": bloco_cdi,
+                "poupanca": bloco_poup,
                 "guru": {
                     "total": round(total_guru, 2),
                     "rent_pct": round(rent_guru, 2),
@@ -1453,6 +1653,7 @@ def calcular_simulador_realidade_vs_guru(ticker: str, preco_atual: float, div_12
         "Na vida real, a riqueza sustentável vem de empresas reais que lucram, geram empregos e pagam proventos factuais auditados."
     )
 
+    padrao_2y = matriz["5000"]["2y"]
     return {
         "ticker": ticker,
         "preco_referencia": p0,
@@ -1461,6 +1662,9 @@ def calcular_simulador_realidade_vs_guru(ticker: str, preco_atual: float, div_12
         "prazos": prazos,
         "prazos_anos": prazos_anos,
         "padrao": {"aporte": 5000, "prazo": "2y"},
+        "aviso_cdi": padrao_2y["cdi"]["aviso"],
+        "aviso_poupanca": padrao_2y["poupanca"]["aviso"],
+        "aproximacao_taxa_fixa": bool(padrao_2y["cdi"]["aproximacao"] or padrao_2y["poupanca"]["aproximacao"]),
         "matriz": matriz,
         "1000": matriz["1000"],
         "5000": matriz["5000"],
@@ -2056,7 +2260,12 @@ def garantir_blocos_didaticos(dados: dict) -> dict:
     if "Dossie_Didatico" not in dados or not dados["Dossie_Didatico"]:
         dados["Dossie_Didatico"] = obter_dossie_didatico(ticker, info, dados)
     if "Simulador_Realidade" not in dados or not dados["Simulador_Realidade"]:
-        dados["Simulador_Realidade"] = calcular_simulador_realidade_vs_guru(ticker, preco, div_12m)
+        dados["Simulador_Realidade"] = calcular_simulador_realidade_vs_guru(
+            ticker,
+            preco,
+            div_12m,
+            historico_mensal=dados.get("Historico_Mensal_5a"),
+        )
     if "Pares_Setoriais" not in dados or not dados["Pares_Setoriais"]:
         dados["Pares_Setoriais"] = obter_comparativo_setorial(ticker, str(info.get("sector") or ""))
     if "Termometro_Macro" not in dados or not dados["Termometro_Macro"]:
@@ -2075,10 +2284,11 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     ticker = resolver_ticker(ticker_usuario)
     simbolo_sa = f"{ticker}.SA"
 
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    with ThreadPoolExecutor(max_workers=4) as executor:
         fut_info = executor.submit(lambda: yf.Ticker(simbolo_sa).info or {})
         fut_div = executor.submit(dividendos_ultimos_12m, yf.Ticker(simbolo_sa))
         fut_hist = executor.submit(_coletar_historico_seguro, yf.Ticker(simbolo_sa))
+        fut_hist_5a = executor.submit(_coletar_historico_mensal_5a, yf.Ticker(simbolo_sa))
 
         try:
             info = fut_info.result()
@@ -2089,6 +2299,7 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
 
         dividendos_12m, qtd_pagamentos = fut_div.result()
         hist_6d = fut_hist.result()
+        historico_mensal_5a = fut_hist_5a.result()
 
     preco = (
         numero(info.get("currentPrice"))
@@ -2196,6 +2407,7 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
     site_oficial = (info.get("website") or "").strip() or None
 
     resultado = {
+        "Historico_Mensal_5a": historico_mensal_5a,
         "Metadados": {
             "moeda_cotacao": moeda_cotacao,
             "simbolo": simbolo,

@@ -1001,3 +1001,63 @@ def test_tier4_s06_auditoria_completa_dossie_fii_mxrf11(client: TestClient):
     r_mxrf = client.get("/analisar?ticker=MXRF11")
     assert r_mxrf.status_code == 200
     assert "MXRF11" in r_mxrf.text
+
+
+# ===========================================================================
+# TESTES DOS AJUSTES DO DOSSIÊ V2 (PASSOS 1 A 5)
+# ===========================================================================
+
+def test_passo1_historico_sintetico_queda_resultado_negativo():
+    """Passo 1: Histórico sintético com queda gera resultado negativo e frase factual com mês/ano."""
+    historico_12m = [
+        {"mes_ano": f"{m:02d}/2025", "data_iso": f"2025-{m:02d}-01", "fechamento": 50.0 if m == 1 else 35.0, "dividendos": 0.50 if m in (3, 6, 9, 12) else 0.0}
+        for m in range(1, 13)
+    ]
+    res = svc.calcular_simulador_realidade_vs_guru(
+        "MGLU3", preco_atual=30.0, div_12m=2.0, historico_mensal=historico_12m
+    )
+    bloco_1y = res["matriz"]["1000"]["1y"]["acao"]
+    assert bloco_1y["disponivel"] is True
+    # 1000 / 50 = 20 cotas; hoje 20 * 30 = 600; proventos 20 * 2.00 = 40; total = 640 (-36%)
+    assert bloco_1y["total"] == pytest.approx(640.0, abs=0.01)
+    assert bloco_1y["dividendos"] == pytest.approx(40.0, abs=0.01)
+    assert bloco_1y["rent_pct"] == pytest.approx(-36.0, abs=0.01)
+    assert bloco_1y["rent_pct"] < 0
+    assert "Se você tivesse investido R$ 1.000 em 01/2025, hoje teria R$ 640,00, sendo R$ 40,00 em proventos" in bloco_1y["frase"]
+
+
+def test_passo1_historico_curto_empresa_nova_listada_ha_menos_de():
+    """Passo 1: Se o histórico não cobre o prazo, exibe 'listada há menos de N anos' em vez de número."""
+    historico_15m = [
+        {"mes_ano": f"{((i % 12) + 1):02d}/2025", "data_iso": f"2025-{((i % 12) + 1):02d}-01", "fechamento": 20.0, "dividendos": 0.10}
+        for i in range(15)
+    ]
+    res = svc.calcular_simulador_realidade_vs_guru(
+        "NOVA3", preco_atual=22.0, div_12m=1.20, historico_mensal=historico_15m
+    )
+    assert res["matriz"]["5000"]["1y"]["acao"]["disponivel"] is True
+    assert res["matriz"]["5000"]["2y"]["acao"]["disponivel"] is False
+    assert res["matriz"]["5000"]["2y"]["acao"]["total"] is None
+    assert "listada há menos de 2 anos" in res["matriz"]["5000"]["2y"]["acao"]["mensagem"].lower()
+    assert res["matriz"]["5000"]["5y"]["acao"]["disponivel"] is False
+    assert "listada há menos de 5 anos" in res["matriz"]["5000"]["5y"]["acao"]["mensagem"].lower()
+
+
+def test_passo1_falha_api_bcb_exibe_aviso_aproximacao_taxa_fixa(client: TestClient, monkeypatch):
+    """Passo 1: Quando a API do Banco Central (SGS) falha, usa taxa fixa e exibe aviso explícito de aproximação."""
+    svc._CACHE_SGS_BCB.clear() if hasattr(svc, "_CACHE_SGS_BCB") else None
+
+    def _falhar_sgs(*_args, **_kwargs):
+        raise RuntimeError("SGS BCB indisponível")
+
+    monkeypatch.setattr(svc, "_consultar_sgs_bcb_http", _falhar_sgs, raising=False)
+    res = svc.calcular_simulador_realidade_vs_guru("PETR4", preco_atual=36.50, div_12m=5.10)
+    cdi_2y = res["matriz"]["5000"]["2y"]["cdi"]
+    poup_2y = res["matriz"]["5000"]["2y"]["poupanca"]
+    assert "aproximação com taxa fixa de" in cdi_2y["aviso"].lower()
+    assert "aproximação com taxa fixa de" in poup_2y["aviso"].lower()
+
+    resp = client.get("/analisar?ticker=PETR4")
+    assert resp.status_code == 200
+    assert "aproximação com taxa fixa de" in resp.text.lower()
+
