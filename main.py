@@ -5,11 +5,13 @@ import os
 import threading
 from typing import Optional
 from urllib.parse import quote_plus
+from bs4 import BeautifulSoup
 import markdown as md
 from fastapi import FastAPI, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.exceptions import RequestValidationError
+from starlette.middleware.gzip import GZipMiddleware
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from slowapi import Limiter
@@ -57,6 +59,23 @@ limiter = Limiter(key_func=obter_ip_cliente, storage_uri=RATE_LIMIT_STORAGE_URI)
 app = FastAPI(title="Investidor IA - Análise Fundamentalista B3")
 app.state.limiter = limiter
 
+# Middleware de compressão GZip para respostas volumosas (> 1KB)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+
+@app.middleware("http")
+async def adicionar_cabecalhos_seguranca(request: Request, call_next):
+    """Aplica cabeçalhos de segurança essenciais contra Clickjacking, MIME-sniffing e XSS."""
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    if auth.EM_PRODUCAO:
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
+
+
 templates = Jinja2Templates(directory=os.path.join(PASTA_PROJETO, "templates"))
 templates.env.globals["PERFIS_OPCOES"] = PERFIS_OPCOES
 templates.env.globals["DESCRICAO_TIPO"] = svc.DESCRICAO_TIPO
@@ -80,10 +99,27 @@ def _obter_lock_ticker(ticker: str) -> threading.Lock:
         return lock
 
 
+ESQUEMAS_URL_PERMITIDOS = ("http://", "https://", "mailto:", "/", "#")
+
+
 def renderizar_markdown(texto: str) -> str:
-    """Converte o relatório (Markdown) em HTML, neutralizando qualquer tag HTML vinda da IA."""
+    """Converte o relatório (Markdown) em HTML, neutralizando tags brutas e protocolos inseguros como javascript:."""
     texto_seguro = (texto or "").replace("<", "&lt;")
-    return md.markdown(texto_seguro, extensions=["extra", "sane_lists"])
+    html_bruto = md.markdown(texto_seguro, extensions=["extra", "sane_lists"])
+    try:
+        soup = BeautifulSoup(html_bruto, "html.parser")
+        for a in soup.find_all("a"):
+            href = a.get("href", "").strip().lower()
+            if not any(href.startswith(esq) for esq in ESQUEMAS_URL_PERMITIDOS):
+                a["href"] = "#"
+            a["rel"] = "noopener noreferrer"
+        for tag in soup.find_all(True):
+            for attr in list(tag.attrs.keys()):
+                if attr.lower().startswith("on"):
+                    del tag[attr]
+        return str(soup)
+    except Exception:
+        return html_bruto
 
 
 def filtro_moeda_br(valor, simbolo: str = "R$") -> str:
@@ -881,7 +917,7 @@ def processar_esqueci_senha(
 
 
 @app.get("/redefinir-senha/{token}", response_class=HTMLResponse)
-def tela_redefinir_senha(request: Request, token: str):
+def tela_redefinir_senha(request: Request, token: str, db: Session = Depends(obter_sessao_banco)):
     dados = auth.ler_token(token, salt="recuperar-senha", max_age_segundos=3600)
     if not dados:
         return templates.TemplateResponse(
@@ -889,10 +925,19 @@ def tela_redefinir_senha(request: Request, token: str):
             name="auth.html",
             context={"modo": "esqueci", "error_msg": "O link de recuperação expirou ou é inválido. Solicite um novo."},
         )
+    if "pwd_stamp" in dados:
+        u = db.query(Usuario).filter(Usuario.id == dados["uid"]).first()
+        if not u or auth.obter_carimbo_senha(u.senha_hash) != dados["pwd_stamp"]:
+            return templates.TemplateResponse(
+                request=request,
+                name="auth.html",
+                context={"modo": "esqueci", "error_msg": "Este link de recuperação já foi utilizado. Solicite um novo."},
+            )
     return templates.TemplateResponse(request=request, name="auth.html", context={"modo": "redefinir", "token": token})
 
 
 @app.post("/redefinir-senha/{token}", response_class=HTMLResponse)
+@limiter.limit("5/minute")
 def processar_redefinir_senha(
     request: Request,
     token: str,
@@ -904,12 +949,17 @@ def processar_redefinir_senha(
         return templates.TemplateResponse(
             request=request,
             name="auth.html",
-            context={"modo": "esqueci", "error_msg": "Link expirado."},
+            context={"modo": "esqueci", "error_msg": "Link expirado ou inválido."},
         )
     u = db.query(Usuario).filter(Usuario.id == dados["uid"]).first()
-    if u:
-        u.senha_hash = auth.gerar_hash_senha(nova_senha)
-        db.commit()
+    if not u or ("pwd_stamp" in dados and auth.obter_carimbo_senha(u.senha_hash) != dados["pwd_stamp"]):
+        return templates.TemplateResponse(
+            request=request,
+            name="auth.html",
+            context={"modo": "esqueci", "error_msg": "Este link de recuperação já foi utilizado ou é inválido."},
+        )
+    u.senha_hash = auth.gerar_hash_senha(nova_senha)
+    db.commit()
     return RedirectResponse(url="/login?msg=Senha+atualizada+com+sucesso!+Faca+login.", status_code=303)
 
 
@@ -977,7 +1027,9 @@ def painel_watchlist(
 
 
 @app.post("/watchlist/adicionar")
+@limiter.limit("30/minute")
 def adicionar_watchlist(
+    request: Request,
     ticker: str = Form(..., min_length=2, max_length=60),
     preco_alvo: str = Form(""),
     notas: str = Form("", max_length=500),
@@ -1021,7 +1073,9 @@ def adicionar_watchlist(
 
 
 @app.post("/watchlist/remover/{item_id}")
+@limiter.limit("30/minute")
 def remover_watchlist(
+    request: Request,
     item_id: int,
     db: Session = Depends(obter_sessao_banco),
     usuario: Optional[Usuario] = Depends(auth.obter_usuario_atual),
@@ -1058,7 +1112,9 @@ def reenviar_confirmacao(
 
 
 @app.post("/conta/excluir")
+@limiter.limit("5/minute")
 def excluir_minha_conta(
+    request: Request,
     senha_confirmacao: str = Form(...),
     db: Session = Depends(obter_sessao_banco),
     usuario: Optional[Usuario] = Depends(auth.obter_usuario_atual),

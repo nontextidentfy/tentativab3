@@ -2,6 +2,7 @@
 Módulo de Segurança e Autenticação do Investidor IA.
 Gerencia hashes Argon2, sessões via cookies HTTP-Only e tokens de e-mail/recuperação.
 """
+import hashlib
 import logging
 import os
 import smtplib
@@ -20,9 +21,23 @@ PASTA_PROJETO = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(PASTA_PROJETO, ".env"))
 log = logging.getLogger("investidor_ia.auth")
 
-SECRET_KEY = os.getenv("SECRET_KEY") or "chave-padrao-desenvolvimento-trocar-em-producao-2026"
+CHAVE_PADRAO_DEV = "chave-padrao-desenvolvimento-trocar-em-producao-2026"
+
+
+def validar_configuracao_seguranca(em_producao: bool, secret_key: Optional[str]) -> str:
+    """Valida a SECRET_KEY. Em produção, recusa chaves vazias ou a chave padrão de desenvolvimento."""
+    chave = (secret_key or "").strip()
+    if em_producao:
+        if not chave or chave == CHAVE_PADRAO_DEV:
+            raise RuntimeError(
+                "ERRO CRÍTICO DE SEGURANÇA: SECRET_KEY forte e obrigatória não foi definida no ambiente de produção!"
+            )
+    return chave or CHAVE_PADRAO_DEV
+
+
 APP_BASE_URL = (os.getenv("APP_BASE_URL") or "http://127.0.0.1:8000").rstrip("/")
 EM_PRODUCAO = os.getenv("RENDER") is not None or APP_BASE_URL.startswith("https://")
+SECRET_KEY = validar_configuracao_seguranca(EM_PRODUCAO, os.getenv("SECRET_KEY"))
 if not os.getenv("SECRET_KEY"):
     log.warning("SECRET_KEY não definida no .env: usando chave de desenvolvimento. Defina uma chave forte antes de publicar o site.")
 
@@ -31,6 +46,13 @@ TEMPO_SESSAO_SEGUNDOS = 60 * 60 * 24 * 7  # 7 dias
 
 ph = PasswordHasher()
 serializer = URLSafeTimedSerializer(SECRET_KEY)
+
+
+def obter_carimbo_senha(senha_hash: Optional[str]) -> str:
+    """Retorna um carimbo compacto (SHA-256) do hash da senha para invalidação de uso único de tokens."""
+    if not senha_hash:
+        return ""
+    return hashlib.sha256(senha_hash.encode("utf-8")).hexdigest()[:16]
 
 
 def email_configurado() -> bool:
@@ -164,7 +186,11 @@ def disparar_confirmacao_email(usuario: Usuario) -> str:
 
 
 def disparar_recuperacao_senha(usuario: Usuario) -> str:
-    token = criar_token({"uid": usuario.id, "email": usuario.email}, salt="recuperar-senha")
+    pwd_stamp = obter_carimbo_senha(usuario.senha_hash)
+    token = criar_token(
+        {"uid": usuario.id, "email": usuario.email, "pwd_stamp": pwd_stamp},
+        salt="recuperar-senha",
+    )
     link = f"{APP_BASE_URL}/redefinir-senha/{token}"
     corpo = (
         f"Olá, {usuario.nome}!\n\n"

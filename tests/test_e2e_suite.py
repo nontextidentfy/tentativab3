@@ -887,11 +887,16 @@ def test_tier3_c05_watchlist_adicionar_apos_analise_marca(client: TestClient, se
     r_analise = client.get("/analisar?ticker=BBAS3")
     assert r_analise.status_code == 200
 
-    # Adiciona à Watchlist
-    r_add = client.post("/api/watchlist", json={"ticker": "BBAS3", "preco_alvo": 35.0, "notas": "Comprar"})
-    if r_add.status_code in (200, 201):
-        monit = sessao_db.query(banco.MonitoramentoUsuario).filter_by(usuario_id=u.id, ticker="BBAS3").first()
-        assert monit is not None
+    # Adiciona à Watchlist via rota real /watchlist/adicionar
+    r_add = client.post(
+        "/watchlist/adicionar",
+        data={"ticker": "BBAS3", "preco_alvo": "35.0", "notas": "Comprar"},
+        follow_redirects=False,
+    )
+    assert r_add.status_code == 303
+    monit = sessao_db.query(banco.MonitoramentoUsuario).filter_by(usuario_id=u.id, ticker="BBAS3").first()
+    assert monit is not None
+    assert monit.ticker == "BBAS3"
 
     client.cookies.clear()
 
