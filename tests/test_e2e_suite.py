@@ -763,6 +763,39 @@ def test_tier2_b24_migracao_alembic_coluna_plano_upgrade_downgrade(tmp_path):
         assert "plano" not in cols_pos_downgrade
 
 
+def test_tier2_b25_migracao_alembic_coluna_plano_idempotente(tmp_path):
+    """
+    [B25] Valida idempotência da migração b2c3d4e5f6a7: se a coluna 'plano' já existir
+    no banco de dados (ex: ambiente Neon pré-existente), o upgrade() não falha com DuplicateColumn.
+    """
+    import sqlalchemy as sa
+    from alembic import command
+    from alembic.config import Config
+
+    db_path = tmp_path / "teste_migracao_idempotente.db"
+    db_url = f"sqlite:///{db_path.as_posix()}"
+
+    alembic_cfg = Config("alembic.ini")
+    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
+
+    # 1. Aplica migração até a1b2c3d4e5f6
+    command.upgrade(alembic_cfg, "a1b2c3d4e5f6")
+
+    eng = sa.create_engine(db_url)
+    with eng.connect() as conn:
+        # Simula coluna já criada manualmente ou pré-existente
+        conn.execute(sa.text("ALTER TABLE usuarios ADD COLUMN plano VARCHAR(20) DEFAULT 'free'"))
+        conn.commit()
+
+    # 2. Executa upgrade b2c3d4e5f6a7 - deve rodar sem levantar exceção de coluna duplicada
+    command.upgrade(alembic_cfg, "b2c3d4e5f6a7")
+
+    with eng.connect() as conn:
+        insp = sa.inspect(conn)
+        cols = {c["name"] for c in insp.get_columns("usuarios")}
+        assert "plano" in cols
+
+
 # ===========================================================================
 # TIER 3: Combinatórios e Cross-Feature (6 Testes)
 # ===========================================================================

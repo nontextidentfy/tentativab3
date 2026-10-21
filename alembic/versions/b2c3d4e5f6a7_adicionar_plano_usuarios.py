@@ -19,19 +19,27 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Adiciona coluna plano na tabela usuarios com default 'free'."""
-    with op.batch_alter_table("usuarios", schema=None) as batch_op:
-        batch_op.add_column(
-            sa.Column(
-                "plano",
-                sa.String(length=20),
-                server_default="free",
-                nullable=False,
+    """Adiciona coluna plano na tabela usuarios com default 'free' se ainda nao existir."""
+    bind = op.get_bind()
+    insp = sa.inspect(bind)
+    cols = {c["name"] for c in insp.get_columns("usuarios")}
+    if "plano" not in cols:
+        with op.batch_alter_table("usuarios", schema=None) as batch_op:
+            batch_op.add_column(
+                sa.Column(
+                    "plano",
+                    sa.String(length=20),
+                    server_default="free",
+                    nullable=False,
+                )
             )
-        )
 
 
 def downgrade() -> None:
-    """Remove coluna plano da tabela usuarios."""
-    with op.batch_alter_table("usuarios", schema=None) as batch_op:
-        batch_op.drop_column("plano")
+    """Remove coluna plano da tabela usuarios se existir."""
+    bind = op.get_bind()
+    insp = sa.inspect(bind)
+    cols = {c["name"] for c in insp.get_columns("usuarios")}
+    if "plano" in cols:
+        with op.batch_alter_table("usuarios", schema=None) as batch_op:
+            batch_op.drop_column("plano")
