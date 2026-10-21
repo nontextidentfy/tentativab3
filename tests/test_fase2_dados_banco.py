@@ -257,6 +257,16 @@ def test_2_c_migracao_alembic_sobe_e_desce_com_dados_exemplo(tmp_path):
         assert mon_rows[0]["preco_alvo_alerta"] == pytest.approx(35.0)
         assert mon_rows[0]["notas_documentacao"] == "Mais recente"
 
+    # 2b. Sobe até head (b2c3d4e5f6a7) e valida presença de "plano" nas colunas de usuarios
+    command.upgrade(alembic_cfg, "head")
+    with eng.connect() as conn:
+        insp_head = sa.inspect(conn)
+        colunas_usuarios = {c["name"] for c in insp_head.get_columns("usuarios")}
+        assert {"id", "nome", "email", "senha_hash", "email_confirmado", "perfil_investidor", "plano", "data_cadastro"}.issubset(
+            colunas_usuarios
+        )
+    command.downgrade(alembic_cfg, "a1b2c3d4e5f6")
+
     # 3. Executa downgrade -1 e verifica restauração de analises_ativos
     command.downgrade(alembic_cfg, "-1")
     with eng.connect() as conn:
