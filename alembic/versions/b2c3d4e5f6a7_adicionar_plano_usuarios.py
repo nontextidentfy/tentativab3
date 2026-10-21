@@ -7,7 +7,7 @@ Create Date: 2026-10-20 20:15:00.000000
 """
 from typing import Sequence, Union
 
-from alembic import op
+from alembic import context, op
 import sqlalchemy as sa
 
 
@@ -20,6 +20,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Adiciona coluna plano na tabela usuarios com default 'free' se ainda nao existir."""
+    if context.is_offline_mode():
+        with op.batch_alter_table("usuarios", schema=None) as batch_op:
+            batch_op.add_column(
+                sa.Column(
+                    "plano",
+                    sa.String(length=20),
+                    server_default="free",
+                    nullable=False,
+                )
+            )
+        return
+
     bind = op.get_bind()
     insp = sa.inspect(bind)
     cols = {c["name"] for c in insp.get_columns("usuarios")}
@@ -36,7 +48,16 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Remove coluna plano da tabela usuarios se existir."""
+    """Remove coluna plano da tabela usuarios se existir.
+
+    CUIDADO: Em ambientes de producao com usuarios ja cadastrados, reverter
+    esta migracao descarta permanentemente os planos ('pro' / 'free') salvos.
+    """
+    if context.is_offline_mode():
+        with op.batch_alter_table("usuarios", schema=None) as batch_op:
+            batch_op.drop_column("plano")
+        return
+
     bind = op.get_bind()
     insp = sa.inspect(bind)
     cols = {c["name"] for c in insp.get_columns("usuarios")}
