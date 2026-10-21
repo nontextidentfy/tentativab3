@@ -201,62 +201,6 @@
     font-size: 0.9rem;
     line-height: 1.6;
   }
-  .bloco-pro-container {
-    position: relative;
-    margin-bottom: 1.5rem;
-  }
-  .bloqueado-pro {
-    border-radius: 16px;
-    overflow: hidden;
-  }
-  .conteudo-borrado {
-    filter: blur(8px);
-    -webkit-filter: blur(8px);
-    user-select: none;
-    pointer-events: none;
-    opacity: 0.38;
-    transition: filter 0.3s ease;
-  }
-  .paywall-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle at center, rgba(7, 11, 18, 0.72) 0%, rgba(7, 11, 18, 0.92) 100%);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    padding: 1.5rem;
-  }
-  .paywall-card-cta {
-    background: rgba(15, 23, 42, 0.95);
-    border: 1px solid rgba(56, 189, 248, 0.35);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.8), 0 0 25px rgba(56, 189, 248, 0.15);
-    border-radius: 16px;
-    padding: 2rem;
-    max-width: 520px;
-    text-align: center;
-  }
-  .paywall-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    background: rgba(56, 189, 248, 0.15);
-    border: 1px solid rgba(56, 189, 248, 0.4);
-    border-radius: 9999px;
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--destaque);
-    margin-bottom: 0.75rem;
-    text-transform: uppercase;
-  }
-  .paywall-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin: 1.25rem 0 0.75rem;
-  }
   .macro-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -310,9 +254,6 @@
     <h2 style="margin:0 0 4px; font-size:1.75rem;">
       {{ dados.Identificacao.Ticker }}
       <span class="badge badge-destaque">{{ dados.Identificacao.Tipo_Ativo }}</span>
-      {% if eh_pro %}
-      <span class="badge badge-pos">👑 Membro Pro</span>
-      {% endif %}
     </h2>
     <div style="color:var(--suave); font-size:.92rem;">
       {{ dados.Identificacao.Nome_Empresa }} • Setor: {{ dados.Identificacao.Setor }} ({{ dados.Identificacao.Industria }})
@@ -538,38 +479,15 @@
 </div>
 
 <!-- ======================================================================= -->
-<!-- GATEWAY FREEMIUM: BLOCOS 3 E 4 (PROTEGIDOS POR PAYWALL)                 -->
+<!-- BLOCOS 3 E 4 (CONTEÚDO PARA QUEM TEM CONTA GRATUITA LOGADA)             -->
 <!-- ======================================================================= -->
-<div class="bloco-pro-container {% if not eh_pro %}bloqueado-pro{% endif %}">
-  {% if not eh_pro %}
-  <div class="paywall-overlay">
-    <div class="paywall-card-cta">
-      <div class="paywall-badge">👑 Camada Pro Exclusiva</div>
-      <h3 style="margin:0 0 8px; font-size:1.35rem; color:var(--texto);">
-        Desbloqueie o Raio-X Setorial e as Projeções de 1 a 5 Anos
-      </h3>
-      <p style="color:var(--suave); font-size:0.9rem; line-height:1.55; margin:0 0 12px;">
-        Acesse a comparação lado a lado com os 2 a 3 maiores rivais da B3, o termômetro macroeconômico e os 3 cenários matemáticos preditivos da IA.
-      </p>
-      <div class="paywall-buttons">
-        <a href="/cadastro" class="btn btn-destaque">
-          ⚡ Desbloquear Versão Pro
-        </a>
-        <a href="/login" class="btn btn-sec">
-          Já sou Pro (Entrar)
-        </a>
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  <div class="{% if not eh_pro %}conteudo-borrado{% endif %}">
+{% if usuario %}
     <!-- =================================================================== -->
-    <!-- BLOCO 3 (Camada Pro): Raio-X dos Rivais B3 & Termômetro Macro       -->
+    <!-- BLOCO 3: Raio-X dos Rivais B3 & Termômetro Macro                    -->
     <!-- =================================================================== -->
     <div class="dossie-bloco">
       <div class="dossie-header">
-        <span class="badge badge-destaque">Bloco 3 • Camada Pro • Comparativo Setorial</span>
+        <span class="badge badge-destaque">Bloco 3 • Comparativo Setorial</span>
         <h3 style="margin:8px 0 4px; font-size:1.35rem; color:var(--texto);">
           ⚔️ Raio-X dos Rivais Diretos na B3 & Forças Macroeconômicas
         </h3>
@@ -777,8 +695,21 @@
         {% endfor %}
       </div>
     </div>
+{% else %}
+<div class="dossie-bloco" style="text-align:center; padding:2rem 1.5rem;">
+  <span class="badge badge-destaque">Blocos 3 e 4 • Conta Gratuita</span>
+  <h3 style="margin:12px 0 8px; font-size:1.3rem; color:var(--texto);">
+    Crie sua conta gratuita para ver a comparação com os concorrentes e o simulador de premissas
+  </h3>
+  <p style="color:var(--suave); font-size:0.92rem; max-width:560px; margin:0 auto 1.25rem; line-height:1.55;">
+    Entre na sua conta ou faça seu cadastro gratuito para consultar a tabela comparativa com os rivais do setor na B3, o termômetro macroeconômico e a calculadora de premissas.
+  </p>
+  <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+    <a href="/cadastro" class="btn btn-destaque">Criar conta gratuita</a>
+    <a href="/login" class="btn btn-sec">Entrar na minha conta</a>
   </div>
 </div>
+{% endif %}
 
 <!-- ======================================================================= -->
 <!-- SEÇÕES DE FUNDAMENTOS CLÁSSICOS & VALUATION PRESERVADAS                 -->

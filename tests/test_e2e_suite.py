@@ -1115,3 +1115,55 @@ def test_passo2_ticker_sem_pares_mostra_frase(client: TestClient, sessao_db):
     client.cookies.clear()
 
 
+def test_passo4_visitante_anonimo_nao_recebe_blocos_3_e_4_no_html(client: TestClient):
+    """Passo 4: Visitante anônimo não recebe no HTML a tabela de rivais nem o simulador de premissas; recebe convite para conta gratuita."""
+    client.cookies.clear()
+    resp = client.get("/analisar?ticker=PETR4")
+    assert resp.status_code == 200
+    html = resp.text
+
+    assert "Crie sua conta gratuita para ver a comparação com os concorrentes e o simulador de premissas" in html
+    assert "/cadastro" in html
+    assert "/login" in html
+    assert "Raio-X dos Rivais Diretos" not in html
+    assert "Simule o futuro com as suas premissas" not in html
+    assert 'id="bloco-4-simulador-premissas"' not in html
+
+
+def test_passo4_usuario_logado_free_recebe_4_blocos_completos(client: TestClient, sessao_db):
+    """Passo 4: Usuário logado com plano='free' recebe os 4 blocos completos e desbloqueados."""
+    u_free = _criar_usuario_teste(sessao_db, email="passo4_free@teste.com", plano="free")
+    client.cookies.update(_criar_cookie_autenticado(u_free.id))
+    resp = client.get("/analisar?ticker=PETR4")
+    assert resp.status_code == 200
+    html = resp.text
+
+    assert "Bloco 1" in html
+    assert "Bloco 2" in html
+    assert "Bloco 3" in html
+    assert "Bloco 4" in html
+    assert "Raio-X dos Rivais Diretos" in html
+    assert "Simule o futuro com as suas premissas" in html
+    assert "Crie sua conta gratuita para ver a comparação com os concorrentes e o simulador de premissas" not in html
+    client.cookies.clear()
+
+
+def test_passo4_grep_html_sem_camada_pro_desbloquear_ou_paywall(client: TestClient, sessao_db):
+    """Passo 4: Grep no HTML renderizado garante que 'Camada Pro', 'Membro Pro', 'Desbloquear Versão Pro' e 'paywall' sumiram."""
+    client.cookies.clear()
+    html_anon = client.get("/analisar?ticker=PETR4").text
+
+    u_pro = _criar_usuario_teste(sessao_db, email="passo4_pro@teste.com", plano="pro")
+    client.cookies.update(_criar_cookie_autenticado(u_pro.id))
+    html_logado = client.get("/analisar?ticker=PETR4").text
+    client.cookies.clear()
+
+    for html in (html_anon, html_logado):
+        assert "Camada Pro" not in html
+        assert "Membro Pro" not in html
+        assert "Desbloquear Versão Pro" not in html
+        assert "paywall" not in html.lower()
+        assert "conteudo-borrado" not in html
+
+
+
