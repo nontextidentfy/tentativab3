@@ -1166,4 +1166,41 @@ def test_passo4_grep_html_sem_camada_pro_desbloquear_ou_paywall(client: TestClie
         assert "conteudo-borrado" not in html
 
 
+def test_passo5_ticker_fora_do_mapa_nao_gera_frases_genericas(client: TestClient):
+    """Passo 5: Ticker fora de MAPA_PERFIL_DIDATICO (ex.: TOTS3) não exibe frases de enchimento; exibe aviso honesto e resumo oficial."""
+    dossie_tots = svc.obter_dossie_didatico(
+        "TOTS3",
+        info={"longName": "TOTVS S.A.", "sector": "Technology", "longBusinessSummary": "TOTVS S.A. provides business management software solutions."},
+    )
+    assert dossie_tots.get("curado") is False
+    assert "atuando na produção, fornecimento e prestação de serviços especializados" not in str(dossie_tots)
+    assert "Ainda não escrevemos o perfil" in dossie_tots.get("aviso_nao_curado", "")
+
+    resp = client.get("/analisar?ticker=TOTS3")
+    assert resp.status_code == 200
+    html = resp.text
+    assert "atuando na produção, fornecimento e prestação de serviços especializados" not in html
+    assert "Ainda não escrevemos o perfil" in html
+    assert "Descrição oficial, em inglês" in html or "Descrição oficial da empresa (em inglês, vinda do Yahoo Finance)" in html
+
+
+def test_passo5_itub4_nao_contem_c6_bank():
+    """Passo 5: ITUB4 não deve conter 'C6 Bank' nas marcas ou perfil."""
+    perfil_itub = svc.MAPA_PERFIL_DIDATICO["ITUB4"]
+    assert "c6 bank" not in str(perfil_itub).lower()
+
+
+def test_passo5_mapa_perfil_didatico_tem_revisado_em_e_exibe_na_tela(client: TestClient):
+    """Passo 5: Todo item de MAPA_PERFIL_DIDATICO tem a chave 'revisado_em' e a tela mostra 'Perfil revisado em outubro de 2026'."""
+    assert len(svc.MAPA_PERFIL_DIDATICO) >= 41
+    for tk, perfil in svc.MAPA_PERFIL_DIDATICO.items():
+        assert perfil.get("revisado_em") == "2026-10", f"Ticker {tk} sem revisado_em='2026-10'"
+        assert "%" not in perfil.get("estrutura_controle", ""), f"Ticker {tk} ainda tem porcentagem fixa em estrutura_controle"
+
+    resp = client.get("/analisar?ticker=PETR4")
+    assert resp.status_code == 200
+    assert "Perfil revisado em outubro de 2026" in resp.text
+
+
+
 

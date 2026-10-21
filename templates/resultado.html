@@ -308,13 +308,14 @@
     </div>
   </div>
 
+  {% if dossie.get('curado', True) and dossie.get('o_que_faz') %}
   <div class="dossie-grid-4">
     <div class="dossie-item">
       <div style="font-size:0.75rem; text-transform:uppercase; color:var(--destaque); font-weight:700; margin-bottom:6px;">
         🛒 O Que Vende na Rua
       </div>
       <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
-        {{ dossie.o_que_faz or "Comercializa produtos e soluções essenciais em seu mercado de atuação." }}
+        {{ dossie.o_que_faz }}
       </div>
     </div>
     <div class="dossie-item">
@@ -322,7 +323,7 @@
         👥 Para Quem Vende
       </div>
       <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
-        {{ dossie.para_quem_vende or "Consumidores finais e clientes corporativos de grande escala." }}
+        {{ dossie.para_quem_vende }}
       </div>
     </div>
     <div class="dossie-item">
@@ -330,7 +331,7 @@
         💰 Como a Grana Entra
       </div>
       <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
-        {{ dossie.como_ganha_dinheiro or "Através da margem operacional entre custos de produção e preços de venda praticados." }}
+        {{ dossie.como_ganha_dinheiro }}
       </div>
     </div>
     <div class="dossie-item">
@@ -338,7 +339,7 @@
         🏛️ Quem Manda (Controle)
       </div>
       <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
-        {{ dossie.estrutura_controle or "Estrutura societária registrada com governança corporativa na B3." }}
+        {{ dossie.estrutura_controle }}
       </div>
       {% if dossie.tipo_controle %}
       <div style="margin-top:6px;">
@@ -350,13 +351,30 @@
 
   <div class="dossie-destaque-box">
     <strong style="color:var(--destaque);">🌱 Na sua vida real:</strong>
-    {{ dossie.contexto_vida_real or "Esta empresa faz parte da engrenagem do cotidiano nacional brasileiro." }}
+    {{ dossie.contexto_vida_real }}
     {% if dossie.marcas_cotidiano %}
     <div style="margin-top:6px; font-size:0.86rem; color:var(--apagado);">
       <strong style="color:var(--suave);">Marcas e Produtos:</strong> {{ dossie.marcas_cotidiano }}
     </div>
     {% endif %}
   </div>
+  <div style="margin-top:10px; font-size:0.78rem; color:var(--apagado); text-align:right;">
+    {{ dossie.get('revisado_em_texto') or 'Perfil revisado em outubro de 2026' }}
+  </div>
+  {% else %}
+  <div class="dossie-destaque-box" style="margin-bottom:12px;">
+    <strong style="color:var(--destaque);">ℹ️ Aviso editorial:</strong>
+    {{ dossie.get('aviso_nao_curado') or 'Ainda não escrevemos o perfil em linguagem simples desta empresa.' }}
+  </div>
+  <div class="dossie-item">
+    <div style="font-size:0.78rem; text-transform:uppercase; color:var(--suave); font-weight:700; margin-bottom:6px;">
+      {{ dossie.get('rotulo_resumo_oficial') or 'Descrição oficial da empresa (em inglês, vinda do Yahoo Finance)' }} — Descrição oficial, em inglês
+    </div>
+    <div style="font-size:0.88rem; color:var(--texto); line-height:1.6;">
+      {{ dossie.get('resumo_oficial') or dados.Identificacao.Resumo_Negocio or 'Descrição oficial indisponível no momento.' }}
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <!-- ======================================================================= -->
