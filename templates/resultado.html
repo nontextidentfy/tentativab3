@@ -10,15 +10,49 @@
     flex-wrap: wrap;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 16px;
-    background: var(--card);
-    padding: 1.5rem;
+    gap: 18px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.90) 0%, rgba(10, 16, 28, 0.85) 100%);
+    padding: 1.6rem 1.8rem;
     border-radius: 14px;
-    border: 1px solid var(--borda);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
-    margin-bottom: 1.25rem;
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    margin-bottom: 1.5rem;
+  }
+  .topo-ativo-dados {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .topo-ativo-titulo {
+    margin: 0 0 4px;
+    font-size: 1.75rem;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: -0.02em;
+    color: var(--texto);
+  }
+  .topo-ativo-sub {
+    color: var(--suave);
+    font-size: 0.88rem;
+  }
+  .topo-ativo-cotacao {
+    text-align: right;
+  }
+  .topo-ativo-preco {
+    font-size: 1.85rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    color: var(--texto);
+  }
+  .topo-ativo-variacao {
+    font-weight: 700;
+    font-size: 0.88rem;
+    margin-top: 2px;
   }
   .topo-acoes {
     display: flex;
@@ -28,7 +62,7 @@
     margin-top: 10px;
   }
   .resumo-negocio {
-    margin-top: 1rem;
+    margin-top: 1.15rem;
     padding-top: 0.9rem;
     border-top: 1px solid var(--borda);
     width: 100%;
@@ -40,13 +74,20 @@
     font-weight: 600;
     color: var(--destaque);
     user-select: none;
+    transition: color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .resumo-negocio summary:hover {
+    color: #fff;
   }
   .resumo-negocio p {
     margin: 0.65rem 0 0;
     line-height: 1.6;
   }
   .margem-barra {
-    height: 6px;
+    height: 5px;
     background: rgba(255, 255, 255, 0.08);
     border-radius: 4px;
     overflow: hidden;
@@ -58,85 +99,113 @@
   }
   .faixa-barra {
     position: relative;
-    height: 8px;
+    height: 6px;
     background: linear-gradient(90deg, var(--neg), #facc15, var(--pos));
     border-radius: 4px;
-    margin: 14px 8px 8px;
+    margin: 16px 8px 10px;
   }
   .faixa-marcador {
     position: absolute;
     top: -5px;
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    background: var(--texto);
+    background: #fff;
     border: 3px solid var(--bg);
     transform: translateX(-50%);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
   }
   .faixa-legenda {
     display: flex;
     justify-content: space-between;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--suave);
     flex-wrap: wrap;
+    font-variant-numeric: tabular-nums;
   }
   .report-box {
     background: var(--card);
     border: 1px solid var(--borda);
     border-radius: 14px;
-    padding: 1.5rem;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    padding: 1.6rem;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 6px 24px -2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
   .report-content {
     color: var(--suave);
     line-height: 1.65;
     overflow-wrap: anywhere;
+    font-size: 0.90rem;
   }
   .report-content pre, .report-content table { max-width: 100%; overflow-x: auto; display: block; white-space: pre-wrap; }
   .report-content h3 {
-    color: var(--destaque);
-    font-size: 1.05rem;
-    margin: 1.3rem 0 0.4rem;
+    color: #fff;
+    font-size: 1.10rem;
+    margin: 1.4rem 0 0.45rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 0.3rem;
   }
   .report-content blockquote {
     border-left: 3px solid var(--destaque);
     margin: 0 0 1rem;
     padding-left: 12px;
     color: var(--suave);
+    background: rgba(56, 189, 248, 0.04);
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-radius: 0 6px 6px 0;
   }
   .dossie-bloco {
     background: var(--card);
     border: 1px solid var(--borda);
     border-radius: 14px;
-    padding: 1.5rem;
+    padding: 1.6rem;
     margin-bottom: 1.5rem;
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
   .dossie-header {
     margin-bottom: 1.25rem;
   }
   .dossie-grid-4 {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
     gap: 14px;
     margin-bottom: 1.25rem;
   }
   .dossie-item {
-    background: rgba(7, 11, 18, 0.55);
+    background: rgba(7, 11, 18, 0.65);
     border: 1px solid var(--borda);
     border-radius: 10px;
-    padding: 1.1rem;
+    padding: 1.15rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    transition: border-color 0.15s ease;
+  }
+  .dossie-item:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+  .dossie-item-rotulo {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--destaque);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .dossie-item-conteudo {
+    font-size: 0.88rem;
+    color: var(--texto);
+    line-height: 1.55;
   }
   .dossie-destaque-box {
-    background: rgba(56, 189, 248, 0.06);
-    border: 1px solid rgba(56, 189, 248, 0.25);
+    background: rgba(56, 189, 248, 0.05);
+    border: 1px solid rgba(56, 189, 248, 0.22);
     border-radius: 10px;
-    padding: 1rem 1.25rem;
+    padding: 1.1rem 1.25rem;
     color: var(--suave);
-    font-size: 0.92rem;
+    font-size: 0.90rem;
     line-height: 1.6;
   }
   .simulador-controles {
@@ -145,88 +214,166 @@
     gap: 14px;
     justify-content: space-between;
     align-items: center;
-    background: rgba(7, 11, 18, 0.6);
+    background: rgba(7, 11, 18, 0.65);
     border: 1px solid var(--borda);
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 1.25rem;
+    border-radius: 10px;
+    padding: 0.9rem 1.15rem;
+    margin-bottom: 1.35rem;
   }
   .simulador-grupo {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     flex-wrap: wrap;
   }
   .simulador-btn {
-    padding: 8px 14px;
-    font-size: 0.85rem;
+    padding: 7px 13px;
+    font-size: 0.82rem;
     font-weight: 600;
-    border-radius: 8px;
-    border: 1px solid var(--borda);
-    background: var(--card);
-    color: var(--texto);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(15, 23, 42, 0.75);
+    color: var(--suave);
     cursor: pointer;
     transition: all 0.15s ease;
+  }
+  .simulador-btn:hover {
+    border-color: rgba(56, 189, 248, 0.35);
+    color: #fff;
   }
   .simulador-btn-ativo {
     background: var(--destaque);
     color: #070b12;
     border-color: var(--destaque);
     font-weight: 700;
+    box-shadow: 0 1px 6px rgba(56, 189, 248, 0.3);
   }
   .simulador-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
     gap: 14px;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1.35rem;
   }
   .sim-card {
-    background: rgba(7, 11, 18, 0.55);
+    background: rgba(7, 11, 18, 0.65);
     border: 1px solid var(--borda);
-    border-radius: 12px;
+    border-radius: 10px;
     padding: 1.15rem;
-    transition: transform 0.15s ease, border-color 0.15s ease;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+  .sim-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.14);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
   }
   .sim-card-acao {
-    border-color: rgba(52, 211, 153, 0.4);
-    background: rgba(52, 211, 153, 0.05);
+    border-color: rgba(52, 211, 153, 0.35);
+    background: linear-gradient(180deg, rgba(52, 211, 153, 0.06) 0%, rgba(7, 11, 18, 0.7) 100%);
   }
   .sim-card-guru {
-    border-color: rgba(251, 113, 133, 0.4);
-    background: rgba(251, 113, 133, 0.05);
+    border-color: rgba(251, 113, 133, 0.35);
+    background: linear-gradient(180deg, rgba(251, 113, 133, 0.06) 0%, rgba(7, 11, 18, 0.7) 100%);
+  }
+  .sim-rotulo {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: var(--suave);
+    margin-bottom: 4px;
+  }
+  .sim-valor {
+    font-size: 1.50rem;
+    font-weight: 800;
+    margin: 4px 0 6px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .sim-detalhe {
+    font-size: 0.76rem;
+    color: var(--suave);
+    line-height: 1.45;
   }
   .sim-veredito {
-    background: rgba(251, 113, 133, 0.08);
-    border: 1px solid rgba(251, 113, 133, 0.35);
+    background: rgba(251, 113, 133, 0.06);
+    border: 1px solid rgba(251, 113, 133, 0.3);
     border-radius: 10px;
-    padding: 1rem 1.25rem;
+    padding: 1.1rem 1.25rem;
     color: #fecaca;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     line-height: 1.6;
   }
   .macro-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
     gap: 12px;
-    margin-top: 1rem;
+    margin-top: 1.15rem;
+  }
+  .macro-item-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .macro-item-titulo {
+    font-size: 0.82rem;
+    color: var(--texto);
+    font-weight: 700;
+  }
+  .macro-item-desc {
+    font-size: 0.78rem;
+    color: var(--suave);
+    line-height: 1.45;
   }
   .traducao-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 14px;
-    margin-top: 1rem;
+    margin-top: 1.15rem;
   }
   .traducao-card {
-    background: rgba(7, 11, 18, 0.6);
+    background: rgba(7, 11, 18, 0.65);
     border: 1px solid var(--borda);
-    border-radius: 12px;
-    padding: 1.25rem;
+    border-radius: 10px;
+    padding: 1.2rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    transition: border-color 0.15s ease;
+  }
+  .traducao-card:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+  .traducao-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .traducao-nome {
+    color: var(--destaque);
+    font-size: 0.90rem;
+    font-weight: 700;
+  }
+  .traducao-analogia {
+    font-size: 0.84rem;
+    color: var(--texto);
+    line-height: 1.5;
+  }
+  .traducao-impacto {
+    margin-top: 0.75rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.84rem;
+    color: var(--suave);
+    line-height: 1.5;
   }
   .traducao-linha {
     margin-top: 0.75rem;
     padding-top: 0.65rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-    font-size: 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 0.84rem;
     color: var(--suave);
     line-height: 1.5;
   }
@@ -253,45 +400,51 @@
 {% set mult_trad = b4_dados.get('multiplos_traduzidos') or dados.get('Multiplos_Traduzidos') or {} %}
 
 <div class="topo-ativo">
-  <div>
-    <h1 style="margin:0 0 4px; font-size:1.75rem;">
+  <div class="topo-ativo-dados">
+    <h1 class="topo-ativo-titulo">
       {{ dados.Identificacao.Ticker }}
       <span class="badge badge-destaque">{{ dados.Identificacao.Tipo_Ativo }}</span>
     </h1>
-    <div style="color:var(--suave); font-size:.92rem;">
+    <div class="topo-ativo-sub">
       {{ dados.Identificacao.Nome_Empresa }} • Setor: {{ dados.Identificacao.Setor }} ({{ dados.Identificacao.Industria }})
     </div>
     <div class="topo-acoes">
       {% if usuario %}
       <form method="post" action="/watchlist/adicionar" style="margin:0;">
         <input type="hidden" name="ticker" value="{{ dados.Identificacao.Ticker }}">
-        <button type="submit" class="btn btn-destaque" style="padding:8px 14px; font-size:.84rem;">
-          ⭐ Adicionar à Watchlist
+        <button type="submit" class="btn btn-destaque" style="padding:7px 13px; font-size:.82rem;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:3px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Adicionar à Watchlist
         </button>
       </form>
       {% else %}
-      <a href="/login?msg=Faca+login+para+adicionar+ativos+a+sua+Watchlist." class="btn btn-destaque" style="padding:8px 14px; font-size:.84rem;">
-        ⭐ Adicionar à Watchlist
+      <a href="/login?msg=Faca+login+para+adicionar+ativos+a+sua+Watchlist." class="btn btn-destaque" style="padding:7px 13px; font-size:.82rem;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:3px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        Adicionar à Watchlist
       </a>
       {% endif %}
 
       {% if site_oficial and site_oficial != 'N/D' %}
       <a href="{{ site_oficial }}" target="_blank" rel="noopener noreferrer" class="btn btn-sec">
-        🌐 Site Oficial / RI
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:3px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        Site Oficial / RI
       </a>
       {% endif %}
     </div>
   </div>
-  <div style="text-align:right;">
-    <div style="font-size:1.95rem; font-weight:800;">{{ dados.Cotacao_e_Mercado.Preco_Atual | moeda_br(simbolo) }}</div>
-    <div class="{{ 'pos' if var_dia >= 0 else 'neg' }}" style="font-weight:700;">
+  <div class="topo-ativo-cotacao">
+    <div class="topo-ativo-preco">{{ dados.Cotacao_e_Mercado.Preco_Atual | moeda_br(simbolo) }}</div>
+    <div class="topo-ativo-variacao {{ 'pos' if var_dia >= 0 else 'neg' }}">
       {{ '+' if var_dia >= 0 else '' }}{{ var_dia | numero_br(2) }}% no pregão
     </div>
   </div>
 
   {% if dados.Identificacao.Resumo_Negocio %}
   <details class="resumo-negocio">
-    <summary>🏢 Sobre {{ dados.Identificacao.Nome_Empresa }} (Resumo Institucional)</summary>
+    <summary>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:4px;"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M8 10h.01"/><path d="M16 10h.01"/><path d="M8 14h.01"/><path d="M16 14h.01"/></svg>
+      Sobre {{ dados.Identificacao.Nome_Empresa }} (Resumo Institucional)
+    </summary>
     <p>{{ dados.Identificacao.Resumo_Negocio }}</p>
   </details>
   {% endif %}
@@ -303,10 +456,10 @@
 <div class="dossie-bloco">
   <div class="dossie-header">
     <span class="badge badge-destaque">Bloco 1 • Dossiê Aberto do Professor da B3</span>
-    <h2 style="margin:8px 0 4px; font-size:1.35rem; color:var(--texto);">
-      🏢 O Que a Empresa Faz e Como Ganha Dinheiro
+    <h2 style="margin:8px 0 4px; font-size:1.30rem; color:var(--texto);">
+      O Que a Empresa Faz e Como Ganha Dinheiro
     </h2>
-    <div style="color:var(--suave); font-size:0.88rem;">
+    <div style="color:var(--suave); font-size:0.86rem;">
       Entenda em linguagem simples o modelo de negócios, quem controla e onde ela entra no seu dia a dia.
     </div>
   </div>
@@ -314,34 +467,34 @@
   {% if dossie.get('curado', True) and dossie.get('o_que_faz') %}
   <div class="dossie-grid-4">
     <div class="dossie-item">
-      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--destaque); font-weight:700; margin-bottom:6px;">
-        🛒 O Que Vende na Rua
+      <div class="dossie-item-rotulo">
+        O Que Vende na Rua
       </div>
-      <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
+      <div class="dossie-item-conteudo">
         {{ dossie.o_que_faz }}
       </div>
     </div>
     <div class="dossie-item">
-      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--destaque); font-weight:700; margin-bottom:6px;">
-        👥 Para Quem Vende
+      <div class="dossie-item-rotulo">
+        Para Quem Vende
       </div>
-      <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
+      <div class="dossie-item-conteudo">
         {{ dossie.para_quem_vende }}
       </div>
     </div>
     <div class="dossie-item">
-      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--pos); font-weight:700; margin-bottom:6px;">
-        💰 Como a Grana Entra
+      <div class="dossie-item-rotulo" style="color:var(--pos);">
+        Como a Grana Entra
       </div>
-      <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
+      <div class="dossie-item-conteudo">
         {{ dossie.como_ganha_dinheiro }}
       </div>
     </div>
     <div class="dossie-item">
-      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--destaque); font-weight:700; margin-bottom:6px;">
-        🏛️ Quem Manda (Controle)
+      <div class="dossie-item-rotulo">
+        Quem Manda (Controle)
       </div>
-      <div style="font-size:0.9rem; color:var(--texto); line-height:1.55;">
+      <div class="dossie-item-conteudo">
         {{ dossie.estrutura_controle }}
       </div>
       {% if dossie.tipo_controle %}
@@ -353,27 +506,27 @@
   </div>
 
   <div class="dossie-destaque-box">
-    <strong style="color:var(--destaque);">🌱 Na sua vida real:</strong>
+    <strong style="color:var(--destaque);">Na sua vida real:</strong>
     {{ dossie.contexto_vida_real }}
     {% if dossie.marcas_cotidiano %}
-    <div style="margin-top:6px; font-size:0.86rem; color:var(--apagado);">
+    <div style="margin-top:6px; font-size:0.84rem; color:var(--apagado);">
       <strong style="color:var(--suave);">Marcas e Produtos:</strong> {{ dossie.marcas_cotidiano }}
     </div>
     {% endif %}
   </div>
-  <div style="margin-top:10px; font-size:0.78rem; color:var(--apagado); text-align:right;">
+  <div style="margin-top:8px; font-size:0.76rem; color:var(--apagado); text-align:right;">
     {{ dossie.get('revisado_em_texto') or 'Perfil revisado em outubro de 2026' }}
   </div>
   {% else %}
   <div class="dossie-destaque-box" style="margin-bottom:12px;">
-    <strong style="color:var(--destaque);">ℹ️ Aviso editorial:</strong>
+    <strong style="color:var(--destaque);">Aviso editorial:</strong>
     {{ dossie.get('aviso_nao_curado') or 'Ainda não escrevemos o perfil em linguagem simples desta empresa.' }}
   </div>
   <div class="dossie-item">
-    <div style="font-size:0.78rem; text-transform:uppercase; color:var(--suave); font-weight:700; margin-bottom:6px;">
+    <div class="dossie-item-rotulo" style="color:var(--suave);">
       {{ dossie.get('rotulo_resumo_oficial') or 'Descrição oficial da empresa (em inglês, vinda do Yahoo Finance)' }}
     </div>
-    <div style="font-size:0.88rem; color:var(--texto); line-height:1.6;">
+    <div class="dossie-item-conteudo">
       {{ dossie.get('resumo_oficial') or dados.Identificacao.Resumo_Negocio or 'Descrição oficial indisponível no momento.' }}
     </div>
   </div>
@@ -386,23 +539,23 @@
 <div class="dossie-bloco">
   <div class="dossie-header">
     <span class="badge badge-pos">Bloco 2 • Simulador Realidade vs. Guru</span>
-    <h2 style="margin:8px 0 4px; font-size:1.35rem; color:var(--texto);">
-      🧮 Simulador Realidade vs. Guru (Detector de Ilusões)
+    <h2 style="margin:8px 0 4px; font-size:1.30rem; color:var(--texto);">
+      Simulador Realidade vs. Guru (Detector de Ilusões)
     </h2>
-    <div style="color:var(--suave); font-size:0.88rem;">
+    <div style="color:var(--suave); font-size:0.86rem;">
       Confronte os proventos factuais e valorização histórica de {{ dados.Identificacao.Ticker }} contra Poupança, CDI e promessas irreais da internet.
     </div>
   </div>
 
   <div class="simulador-controles">
     <div class="simulador-grupo">
-      <span style="font-size:0.84rem; color:var(--suave); font-weight:600;">💵 Aporte Inicial:</span>
+      <span style="font-size:0.80rem; color:var(--suave); font-weight:600;">Aporte Inicial:</span>
       <button type="button" class="simulador-btn" aria-pressed="false" onclick="atualizarSimulador(1000, null)" data-aporte="1000">R$ 1.000</button>
       <button type="button" class="simulador-btn simulador-btn-ativo" aria-pressed="true" onclick="atualizarSimulador(5000, null)" data-aporte="5000">R$ 5.000</button>
       <button type="button" class="simulador-btn" aria-pressed="false" onclick="atualizarSimulador(10000, null)" data-aporte="10000">R$ 10.000</button>
     </div>
     <div class="simulador-grupo">
-      <span style="font-size:0.84rem; color:var(--suave); font-weight:600;">⏳ Prazo:</span>
+      <span style="font-size:0.80rem; color:var(--suave); font-weight:600;">Prazo:</span>
       <button type="button" class="simulador-btn" aria-pressed="false" onclick="atualizarSimulador(null, '1y')" data-prazo="1y">1 Ano</button>
       <button type="button" class="simulador-btn simulador-btn-ativo" aria-pressed="true" onclick="atualizarSimulador(null, '2y')" data-prazo="2y">2 Anos</button>
       <button type="button" class="simulador-btn" aria-pressed="false" onclick="atualizarSimulador(null, '5y')" data-prazo="5y">5 Anos</button>
@@ -418,83 +571,83 @@
 
   <div class="simulador-grid">
     <div class="sim-card sim-card-acao">
-      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--pos); font-weight:700;">
-        📈 Histórico Factual ({{ dados.Identificacao.Ticker }})
+      <div class="sim-rotulo" style="color:var(--pos);">
+        Histórico Factual ({{ dados.Identificacao.Ticker }})
       </div>
       {% if acao_2y.get('disponivel') %}
-      <div id="sim-acao-total" style="font-size:1.6rem; font-weight:800; color:{{ 'var(--pos)' if rent_2y >= 0 else 'var(--neg)' }}; margin:6px 0;">
+      <div id="sim-acao-total" class="sim-valor" style="color:{{ 'var(--pos)' if rent_2y >= 0 else 'var(--neg)' }};">
         {{ acao_2y.get('total') | moeda_br('R$') }}
       </div>
-      <div style="margin-bottom:6px;">
+      <div style="margin-bottom:5px;">
         <span id="sim-acao-rent" class="badge {{ 'badge-pos' if rent_2y >= 0 else 'badge-neg' }}">
           {{ '+' if rent_2y >= 0 else '' }}{{ rent_2y | numero_br(2) }}%
         </span>
       </div>
-      <div id="sim-acao-detalhe" style="font-size:0.78rem; color:var(--suave); line-height:1.45;">
+      <div id="sim-acao-detalhe" class="sim-detalhe">
         {{ acao_2y.get('frase') }}
       </div>
       {% else %}
-      <div id="sim-acao-total" style="font-size:1.15rem; font-weight:700; color:var(--suave); margin:8px 0;">
+      <div id="sim-acao-total" class="sim-valor" style="font-size:1.10rem; color:var(--suave);">
         {{ acao_2y.get('mensagem') or 'listada há menos de 2 anos' }}
       </div>
-      <div style="margin-bottom:6px;">
+      <div style="margin-bottom:5px;">
         <span id="sim-acao-rent" class="badge">Histórico curto</span>
       </div>
-      <div id="sim-acao-detalhe" style="font-size:0.78rem; color:var(--suave); line-height:1.45;">
+      <div id="sim-acao-detalhe" class="sim-detalhe">
         {{ acao_2y.get('mensagem') or 'listada há menos de 2 anos' }}
       </div>
       {% endif %}
     </div>
 
     <div class="sim-card">
-      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--destaque); font-weight:700;">
-        🏦 CDI Líquido no Período
+      <div class="sim-rotulo" style="color:var(--destaque);">
+        CDI Líquido no Período
       </div>
-      <div id="sim-cdi-total" style="font-size:1.6rem; font-weight:800; color:var(--texto); margin:6px 0;">
+      <div id="sim-cdi-total" class="sim-valor" style="color:var(--texto);">
         {{ cdi_2y.get('total') | moeda_br('R$') }}
       </div>
-      <div style="margin-bottom:6px;">
+      <div style="margin-bottom:5px;">
         <span id="sim-cdi-rent" class="badge badge-destaque">+{{ cdi_2y.get('rent_pct') | numero_br(2) }}%</span>
       </div>
-      <div id="sim-cdi-aviso" style="font-size:0.78rem; color:var(--apagado);">
+      <div id="sim-cdi-aviso" class="sim-detalhe" style="color:var(--apagado);">
         {{ cdi_2y.get('aviso') or sim.get('aviso_cdi') or 'Série 12 do Banco Central' }}
       </div>
     </div>
 
     <div class="sim-card">
-      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--suave); font-weight:700;">
-        🐷 Caderneta de Poupança
+      <div class="sim-rotulo">
+        Poupança (Série 195 BCB)
       </div>
-      <div id="sim-poup-total" style="font-size:1.6rem; font-weight:800; color:var(--texto); margin:6px 0;">
+      <div id="sim-poup-total" class="sim-valor" style="color:var(--texto);">
         {{ poup_2y.get('total') | moeda_br('R$') }}
       </div>
-      <div style="margin-bottom:6px;">
+      <div style="margin-bottom:5px;">
         <span id="sim-poup-rent" class="badge">+{{ poup_2y.get('rent_pct') | numero_br(2) }}%</span>
       </div>
-      <div id="sim-poup-aviso" style="font-size:0.78rem; color:var(--apagado);">
+      <div id="sim-poup-aviso" class="sim-detalhe" style="color:var(--apagado);">
         {{ poup_2y.get('aviso') or sim.get('aviso_poupanca') or 'Série 195 do Banco Central' }}
       </div>
     </div>
 
     <div class="sim-card sim-card-guru">
-      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--neg); font-weight:700;">
-        🚨 Mito do Guru (5% ao mês)
+      <div class="sim-rotulo" style="color:var(--neg);">
+        Mito do Guru (5% ao mês)
       </div>
-      <div id="sim-guru-total" style="font-size:1.6rem; font-weight:800; color:var(--neg); margin:6px 0;">
+      <div id="sim-guru-total" class="sim-valor" style="color:var(--neg);">
         {{ guru_2y.get('total') | moeda_br('R$') }}
       </div>
-      <div style="margin-bottom:6px;">
+      <div style="margin-bottom:5px;">
         <span id="sim-guru-rent" class="badge badge-neg">+{{ guru_2y.get('rent_pct') | numero_br(2) }}%</span>
         <span class="badge badge-neg">ILUSÃO</span>
       </div>
-      <div style="font-size:0.78rem; color:var(--apagado);">
+      <div class="sim-detalhe" style="color:var(--apagado);">
         Promessa matemática irreal de pirâmide/day trade
       </div>
     </div>
   </div>
 
   <div class="sim-veredito">
-    <strong style="color:#fecaca;">🚨 Veredito Anti-Guru do Professor da B3:</strong><br>
+    <strong style="color:#fecaca;">Veredito Anti-Guru do Professor da B3:</strong><br>
     {{ sim.veredito_anti_guru or "Se a promessa de 5% ao mês fosse verdadeira, R$ 5.000 se tornariam R$ 93.395 em 5 anos e R$ 1,7 milhão em 10 anos! No mundo real, a riqueza sustentável vem de empresas reais que lucram e pagam proventos factuais auditados." }}
   </div>
 </div>
@@ -509,10 +662,10 @@
     <div class="dossie-bloco">
       <div class="dossie-header">
         <span class="badge badge-destaque">Bloco 3 • Comparativo Setorial</span>
-        <h2 style="margin:8px 0 4px; font-size:1.35rem; color:var(--texto);">
-          ⚔️ Raio-X dos Rivais Diretos na B3 & Forças Macroeconômicas
+        <h2 style="margin:8px 0 4px; font-size:1.30rem; color:var(--texto);">
+          Raio-X dos Rivais Diretos na B3 & Forças Macroeconômicas
         </h2>
-        <div style="color:var(--suave); font-size:0.88rem;">
+        <div style="color:var(--suave); font-size:0.86rem;">
           Compare os múltiplos e a eficiência operacional de {{ dados.Identificacao.Ticker }} com seus maiores concorrentes na Bolsa.
         </div>
       </div>
@@ -577,7 +730,7 @@
       </div>
       {% endif %}
 
-      <h3 class="secao-titulo">🌡️ Termômetro de Sensibilidade Macroeconômica</h3>
+      <h3 class="secao-titulo">Termômetro de Sensibilidade Macroeconômica</h3>
       <div class="macro-grid">
         {% set macro_itens = [
           ('Selic (Juros)', macro.get('selic') or macro.get('SELIC') or {}),
@@ -588,8 +741,8 @@
         ] %}
         {% for nome_macro, item_macro in macro_itens %}
         <div class="dossie-item">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <strong style="font-size:0.85rem; color:var(--texto);">{{ nome_macro }}</strong>
+          <div class="macro-item-topo">
+            <span class="macro-item-titulo">{{ nome_macro }}</span>
             {% if item_macro.direcao == 'Positiva' %}
             <span class="badge badge-pos">
             {% elif item_macro.direcao == 'Negativa' %}
@@ -600,7 +753,7 @@
               {{ item_macro.sensibilidade or 'Média' }}
             </span>
           </div>
-          <div style="font-size:0.8rem; color:var(--suave); line-height:1.45;">
+          <div class="macro-item-desc">
             {{ item_macro.impacto or 'Sensibilidade moderada de acordo com as condições de mercado.' }}
           </div>
         </div>
@@ -614,10 +767,10 @@
     <div class="dossie-bloco" id="bloco-4-simulador-premissas">
       <div class="dossie-header">
         <span class="badge badge-pos">Bloco 4 • Calculadora de Premissas</span>
-        <h2 style="margin:8px 0 4px; font-size:1.35rem; color:var(--texto);">
-          🎛️ Simule o futuro com as suas premissas
+        <h2 style="margin:8px 0 4px; font-size:1.30rem; color:var(--texto);">
+          Simule o futuro com as suas premissas
         </h2>
-        <div style="color:var(--suave); font-size:0.88rem;">
+        <div style="color:var(--suave); font-size:0.86rem;">
           Escolha abaixo uma hipótese de evolução anual do lucro por ação (LPA), o múltiplo P/L futuro e o prazo para ver a conta aritmética na hora.
         </div>
       </div>
@@ -625,19 +778,19 @@
       {% if sim_premissas.get('disponivel') %}
       <div class="simulador-controles">
         <div class="simulador-grupo">
-          <span style="font-size:0.82rem; color:var(--suave); font-weight:600;">Lucro anual (LPA):</span>
+          <span style="font-size:0.80rem; color:var(--suave); font-weight:600;">Lucro anual (LPA):</span>
           <button type="button" class="simulador-btn" aria-pressed="false" data-cresc="-0.05" onclick="atualizarPremissas(-0.05, null, null)">-5% ao ano</button>
           <button type="button" class="simulador-btn simulador-btn-ativo" aria-pressed="true" data-cresc="0" onclick="atualizarPremissas(0, null, null)">0% ao ano</button>
           <button type="button" class="simulador-btn" aria-pressed="false" data-cresc="0.10" onclick="atualizarPremissas(0.10, null, null)">+10% ao ano</button>
         </div>
         <div class="simulador-grupo">
-          <span style="font-size:0.82rem; color:var(--suave); font-weight:600;">Múltiplo P/L futuro:</span>
+          <span style="font-size:0.80rem; color:var(--suave); font-weight:600;">Múltiplo P/L futuro:</span>
           <button type="button" class="simulador-btn" aria-pressed="false" data-pl="6" onclick="atualizarPremissas(null, 6, null)">6</button>
           <button type="button" class="simulador-btn simulador-btn-ativo" aria-pressed="true" data-pl="10" onclick="atualizarPremissas(null, 10, null)">10</button>
           <button type="button" class="simulador-btn" aria-pressed="false" data-pl="15" onclick="atualizarPremissas(null, 15, null)">15</button>
         </div>
         <div class="simulador-grupo">
-          <span style="font-size:0.82rem; color:var(--suave); font-weight:600;">Prazo:</span>
+          <span style="font-size:0.80rem; color:var(--suave); font-weight:600;">Prazo:</span>
           <button type="button" class="simulador-btn simulador-btn-ativo" aria-pressed="true" data-anos-prem="1" onclick="atualizarPremissas(null, null, 1)">1 ano</button>
           <button type="button" class="simulador-btn" aria-pressed="false" data-anos-prem="5" onclick="atualizarPremissas(null, null, 5)">5 anos</button>
         </div>
@@ -645,72 +798,72 @@
 
       <div class="simulador-grid">
         <div class="sim-card">
-          <div style="font-size:0.78rem; text-transform:uppercase; color:var(--suave); font-weight:700;">
+          <div class="sim-rotulo">
             Ponto de Partida (Dados Atuais)
           </div>
-          <div style="font-size:1.25rem; font-weight:800; color:var(--texto); margin:8px 0 4px;">
+          <div class="sim-valor" style="font-size:1.20rem; color:var(--texto);">
             Cotação: {{ sim_premissas.get('preco_atual') | moeda_br(simbolo) }}
           </div>
-          <div style="font-size:0.82rem; color:var(--suave);">
+          <div class="sim-detalhe">
             LPA (12m): {{ sim_premissas.get('lpa_atual') | moeda_br(simbolo) }} • DY (12m): {{ ((sim_premissas.get('dy_atual') or 0) * 100) | numero_br(2) }}%
           </div>
         </div>
 
         <div class="sim-card">
-          <div style="font-size:0.78rem; text-transform:uppercase; color:var(--destaque); font-weight:700;">
+          <div class="sim-rotulo" style="color:var(--destaque);">
             LPA Calculado na Hipótese
           </div>
-          <div id="prem-lpa-futuro" style="font-size:1.45rem; font-weight:800; color:var(--texto); margin:8px 0 4px;">
+          <div id="prem-lpa-futuro" class="sim-valor" style="font-size:1.40rem; color:var(--texto);">
             {{ sim_premissas.get('lpa_futuro') | moeda_br(simbolo) }}
           </div>
-          <div id="prem-formula-lpa" style="font-size:0.78rem; color:var(--suave);">
+          <div id="prem-formula-lpa" class="sim-detalhe">
             LPA atual × (1 + crescimento)^anos
           </div>
         </div>
 
         <div class="sim-card sim-card-acao">
-          <div style="font-size:0.78rem; text-transform:uppercase; color:var(--pos); font-weight:700;">
+          <div class="sim-rotulo" style="color:var(--pos);">
             Resultado da Conta Escolhida
           </div>
-          <div id="prem-cota-hipotese" style="font-size:1.55rem; font-weight:800; color:var(--pos); margin:8px 0 4px;">
+          <div id="prem-cota-hipotese" class="sim-valor" style="font-size:1.50rem; color:var(--pos);">
             {{ sim_premissas.get('valor_cota_hipotese') | moeda_br(simbolo) }}
           </div>
-          <div id="prem-proventos" style="font-size:0.8rem; color:var(--suave);">
+          <div id="prem-proventos" class="sim-detalhe">
             Proventos acumulados no período: {{ sim_premissas.get('proventos_acumulados') | moeda_br(simbolo) }}
           </div>
-          <div id="prem-total-hipotese" style="font-size:0.82rem; color:var(--texto); font-weight:600; margin-top:4px;">
+          <div id="prem-total-hipotese" class="sim-detalhe" style="color:var(--texto); font-weight:600; margin-top:4px;">
             Cota + proventos na hipótese: {{ sim_premissas.get('total_cota_mais_proventos') | moeda_br(simbolo) }}
           </div>
         </div>
       </div>
       {% else %}
       <div class="dossie-destaque-box" style="margin-bottom:1.25rem;">
-        <strong style="color:var(--neg);">⚠️ Simulação indisponível:</strong>
+        <strong style="color:var(--neg);">Simulação indisponível:</strong>
         {{ sim_premissas.get('motivo') or 'não dá para simular: a empresa não teve lucro nos últimos 12 meses' }}
       </div>
       {% endif %}
 
       <div class="dossie-destaque-box" style="margin-bottom:1.25rem;">
-        <strong style="color:var(--destaque);">📌 Aviso importante:</strong>
+        <strong style="color:var(--destaque);">Aviso importante:</strong>
         Isto não é previsão nem recomendação. É só a conta das premissas que você escolheu.
       </div>
 
-      <!-- Tradução Absoluta dos Múltiplos (Regra R1) -->
-      <h3 class="secao-titulo">📖 Tradução Absoluta dos Múltiplos (Regra R1: Zero Economês Isolado)</h3>
+      <!-- Tradução Prática dos Múltiplos -->
+      <h3 class="secao-titulo">Tradução dos Múltiplos e Indicadores</h3>
       <div class="traducao-grid">
         {% for chave_m, item_m in mult_trad.items() %}
         <div class="traducao-card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <strong style="color:var(--destaque); font-size:0.92rem;">{{ item_m.nome }}</strong>
+          <div class="traducao-topo">
+            <span class="traducao-nome">{{ item_m.nome }}</span>
             <span class="badge {{ 'badge-pos' if item_m.classe_css == 'pos' else ('badge-neg' if item_m.classe_css == 'neg' else '') }}">
               Leitura: {{ item_m.leitura or item_m.situacao }}
             </span>
           </div>
-          <div style="font-size:0.85rem; color:var(--texto); line-height:1.5;">
+          <div class="traducao-analogia">
             <strong>Analogia:</strong> {{ item_m.analogia }}
           </div>
-          <div class="traducao-linha">
-            <strong style="color:var(--pos);">💼 Impacto no seu bolso:</strong> {{ item_m.impacto_bolso }}
+          <div class="traducao-impacto">
+            <strong style="color:var(--pos);">Impacto no seu bolso:</strong> {{ item_m.impacto_bolso }}
           </div>
         </div>
         {% endfor %}
@@ -718,18 +871,18 @@
 
       {% set checks = dados.get('Checagens_Cruzadas') or [] %}
       {% if checks %}
-      <h3 class="secao-titulo">🔎 Checagem Cruzada: o número bom esconde algo?</h3>
-      <p style="color:var(--suave); font-size:0.88rem; margin:0 0 0.25rem; line-height:1.55;">
+      <h3 class="secao-titulo">Checagem Cruzada: o número bom esconde algo?</h3>
+      <p style="color:var(--suave); font-size:0.86rem; margin:0 0 0.25rem; line-height:1.55;">
         Um indicador bonito sozinho engana. Quando um deles chama atenção, conferimos automaticamente o indicador que costuma desmenti-lo.
       </p>
       <div class="traducao-grid">
         {% for c in checks %}
         <div class="traducao-card">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-            <strong style="color:var(--destaque); font-size:0.92rem;">{{ c.gatilho }}</strong>
+          <div class="traducao-topo">
+            <span class="traducao-nome">{{ c.gatilho }}</span>
             <span class="badge {{ c.classe_css }}">{{ c.rotulo }}</span>
           </div>
-          <div style="font-size:0.85rem; color:var(--texto); line-height:1.5;">
+          <div class="traducao-analogia">
             <strong>Conferimos:</strong> {{ c.pergunta }}
           </div>
           <div class="traducao-linha">{{ c.leitura }}</div>
@@ -741,10 +894,10 @@
 {% else %}
 <div class="dossie-bloco" style="text-align:center; padding:2rem 1.5rem;">
   <span class="badge badge-destaque">Blocos 3 e 4 • Conta Gratuita</span>
-  <h2 style="margin:12px 0 8px; font-size:1.3rem; color:var(--texto);">
+  <h2 style="margin:12px 0 8px; font-size:1.25rem; color:var(--texto);">
     Crie sua conta gratuita para ver a comparação com os concorrentes e o simulador de premissas
   </h2>
-  <p style="color:var(--suave); font-size:0.92rem; max-width:560px; margin:0 auto 1.25rem; line-height:1.55;">
+  <p style="color:var(--suave); font-size:0.90rem; max-width:560px; margin:0 auto 1.25rem; line-height:1.55;">
     Entre na sua conta ou faça seu cadastro gratuito para consultar a tabela comparativa com os rivais do setor na B3, o termômetro macroeconômico e a calculadora de premissas.
   </p>
   <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
@@ -757,7 +910,7 @@
 <!-- ======================================================================= -->
 <!-- SEÇÕES DE FUNDAMENTOS CLÁSSICOS & VALUATION PRESERVADAS                 -->
 <!-- ======================================================================= -->
-<h3 class="secao-titulo">📐 Múltiplos de Valuation & Preços de Referência</h3>
+<h3 class="secao-titulo">Múltiplos de Valuation & Preços de Referência</h3>
 <div class="cards-grid">
   <div class="card">
     <div class="title">P/L Atual</div>
@@ -831,7 +984,7 @@
 
 {% if dados.Numeros.min_52s and dados.Numeros.max_52s %}
 <div class="painel">
-  <div style="font-size:.78rem; color:var(--suave); text-transform:uppercase;">Termômetro de Preço: Faixa de 52 Semanas</div>
+  <div style="font-size:.76rem; color:var(--suave); text-transform:uppercase; letter-spacing:.06em;">Termômetro de Preço: Faixa de 52 Semanas</div>
   <div class="faixa-barra">
     <div class="faixa-marcador" style="left:{{ dados.Numeros.pos_52s }}%"></div>
   </div>
@@ -843,7 +996,7 @@
 </div>
 {% endif %}
 
-<h3 class="secao-titulo">📈 Monitor de Liquidez & Fluxo de Volume</h3>
+<h3 class="secao-titulo">Monitor de Liquidez & Fluxo de Volume</h3>
 <div class="cards-grid">
   <div class="card">
     <div class="title">Volume Financeiro (Dia)</div>
@@ -870,7 +1023,7 @@
 </div>
 
 <div class="painel">
-  <h3>📊 Histórico de Volume nos Últimos 5 Pregões</h3>
+  <h3>Histórico de Volume nos Últimos 5 Pregões</h3>
   <div style="overflow-x:auto;" tabindex="0">
     <table class="tabela">
       <thead>
@@ -899,7 +1052,7 @@
   </div>
 </div>
 
-<h3 class="secao-titulo">📑 Documentação Contábil (Balanço Patrimonial & Eficiência)</h3>
+<h3 class="secao-titulo">Documentação Contábil (Balanço Patrimonial & Eficiência)</h3>
 <div class="grid-duplo">
   <div class="painel" style="margin-bottom:0;">
     <h3>Eficiência Operacional & Margens</h3>
@@ -942,15 +1095,21 @@
 </div>
 
 <div class="report-box" style="margin-top:1.5rem;">
-  <h3 style="color:var(--destaque); margin-top:0;">🤖 Diagnóstico Fundamentalista & Análise de Fluxo ({{ motor }})</h3>
+  <h3 style="color:var(--destaque); margin-top:0;">Diagnóstico Fundamentalista & Análise de Fluxo ({{ motor }})</h3>
   <div class="report-content">
     {{ relatorio_html | safe }}
   </div>
-  <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--borda); font-size:0.82rem; color:var(--apagado);">
+  <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--borda); font-size:0.80rem; color:var(--apagado);">
     <span>Origem: {{ origem }} • Atualizado em {{ data_dados | horario_br }} (Horário de Brasília)</span>
     <div style="display:flex; gap:8px; flex-wrap:wrap;">
-      <a href="/" class="btn btn-sec">⬅ Voltar ao Painel</a>
-      <a data-carrega href="/analisar?ticker={{ dados.Identificacao.Ticker }}&atualizar=1" class="btn btn-sec">🔄 Forçar Atualização</a>
+      <a href="/" class="btn btn-sec">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:3px;"><polyline points="15 18 9 12 15 6"/></svg>
+        Voltar ao Painel
+      </a>
+      <a data-carrega href="/analisar?ticker={{ dados.Identificacao.Ticker }}&atualizar=1" class="btn btn-sec">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:3px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        Forçar Atualização
+      </a>
     </div>
   </div>
 </div>
@@ -1003,7 +1162,7 @@
 
     if (acao.disponivel) {
       elTotal.textContent = formatarMoeda(acao.total);
-      elTotal.style.fontSize = '1.6rem';
+      elTotal.style.fontSize = '1.50rem';
       elTotal.style.color = acao.rent_pct >= 0 ? 'var(--pos)' : 'var(--neg)';
       elRent.textContent = formatarPct(acao.rent_pct);
       elRent.className = acao.rent_pct >= 0 ? 'badge badge-pos' : 'badge badge-neg';
@@ -1013,7 +1172,7 @@
     } else {
       const msgCurto = acao.mensagem || 'listada há menos de ' + String(prazoAtual).replace('y', '') + ' anos';
       elTotal.textContent = msgCurto;
-      elTotal.style.fontSize = '1.15rem';
+      elTotal.style.fontSize = '1.10rem';
       elTotal.style.color = 'var(--suave)';
       elRent.textContent = 'Histórico curto';
       elRent.className = 'badge';
@@ -1087,7 +1246,6 @@
     if (elTotal) elTotal.textContent = 'Cota + proventos na hipótese: ' + formatarMoeda(totalHipotese);
   }
 
-  // Inicializa o simulador na carga
   document.addEventListener('DOMContentLoaded', function() {
     atualizarSimulador(5000, '2y');
     atualizarPremissas(0, 10, 1);

@@ -108,7 +108,7 @@ ESQUEMAS_URL_PERMITIDOS = ("http://", "https://", "mailto:", "/", "#")
 def renderizar_markdown(texto: str) -> str:
     """Converte o relatório (Markdown) em HTML, neutralizando tags brutas e protocolos inseguros como javascript:."""
     # Sem travessões no texto exibido (regra editorial): "a — b" vira "a, b"
-    texto_seguro = re.sub(r"\s*[—–]\s*", ", ", texto or "").replace("<", "&lt;")
+    texto_seguro = re.sub(r"[ \t]*—[ \t]*", ", ", texto or "").replace("<", "&lt;")
     html_bruto = md.markdown(texto_seguro, extensions=["extra", "sane_lists"])
     try:
         soup = BeautifulSoup(html_bruto, "html.parser")
@@ -159,6 +159,7 @@ def filtro_horario_br(data_utc) -> str:
     return data_utc.astimezone(svc.FUSO_BRASILIA).strftime("%d/%m/%Y às %H:%M")
 
 
+templates.env.globals["empresa_rodape"] = (os.getenv("EMPRESA_RODAPE") or "").strip()
 templates.env.filters["moeda_br"] = filtro_moeda_br
 templates.env.filters["numero_br"] = filtro_numero_br
 templates.env.filters["percentual_br"] = filtro_percentual_br
@@ -419,11 +420,25 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    if exc.status_code != 404:
+    accept = request.headers.get("accept", "")
+    quer_json = request.url.path.startswith("/api/") or ("application/json" in accept and "text/html" not in accept)
+    if exc.status_code != 404 or quer_json:
         return await http_exception_handler_padrao(request, exc)
-    with SessionLocal() as db:
-        usuario = auth.obter_usuario_atual(request, db)
+    try:
+        with SessionLocal() as db:
+            usuario = auth.obter_usuario_atual(request, db)
+    except Exception:
+        usuario = None
     return templates.TemplateResponse(request=request, name="404.html", context={"usuario": usuario}, status_code=404)
+
+
+def _msg_email(enviado: str, local: str) -> str:
+    """Mensagem honesta sobre o e-mail: enviado, impresso no terminal (local) ou indisponível (produção sem SMTP)."""
+    if auth.email_configurado():
+        return enviado
+    if not auth.EM_PRODUCAO:
+        return local
+    return "O envio de e-mail está indisponível no momento. Tente novamente mais tarde ou contate o suporte."
 
 
 # ---------------------------------------------------------------------------
@@ -789,10 +804,9 @@ def processar_cadastro(
                     context={"modo": "cadastro", "error_msg": "Este e-mail já está cadastrado. Faça login ou recupere sua senha."},
                 )
             auth.disparar_confirmacao_email(usuario_existente)
-            msg_atualizado = (
-                "Cadastro atualizado com sucesso! Enviamos um link para o seu e-mail."
-                if auth.email_configurado()
-                else "Cadastro atualizado com sucesso! Confira o terminal para confirmar o e-mail."
+            msg_atualizado = _msg_email(
+                "Cadastro atualizado com sucesso! Enviamos um link para o seu e-mail.",
+                "Cadastro atualizado com sucesso! Confira o terminal para confirmar o e-mail.",
             )
             resp = RedirectResponse(
                 url=f"/watchlist?msg={quote_plus(msg_atualizado)}",
@@ -829,10 +843,9 @@ def processar_cadastro(
 
     auth.disparar_confirmacao_email(novo_usuario)
 
-    msg_criada = (
-        "Conta criada! Enviamos um link para o seu e-mail para confirmar o cadastro."
-        if auth.email_configurado()
-        else "Conta criada! Verifique seu e-mail (ou confira o terminal de teste) para confirmar o cadastro."
+    msg_criada = _msg_email(
+        "Conta criada! Enviamos um link para o seu e-mail para confirmar o cadastro.",
+        "Conta criada! Verifique seu e-mail (ou confira o terminal de teste) para confirmar o cadastro.",
     )
     resp = RedirectResponse(url=f"/watchlist?msg={quote_plus(msg_criada)}", status_code=303)
     auth.definir_cookie_sessao(resp, novo_usuario.id)
@@ -914,10 +927,9 @@ def processar_esqueci_senha(
     u = db.query(Usuario).filter(Usuario.email == email.strip().lower()).first()
     if u:
         auth.disparar_recuperacao_senha(u)
-    msg_esqueci = (
-        "Se o e-mail estiver cadastrado, enviamos um link para o seu e-mail."
-        if auth.email_configurado()
-        else "Se o e-mail estiver cadastrado, enviamos o link de recuperação (confira o terminal em modo local)."
+    msg_esqueci = _msg_email(
+        "Se o e-mail estiver cadastrado, enviamos um link para o seu e-mail.",
+        "Se o e-mail estiver cadastrado, enviamos o link de recuperação (confira o terminal em modo local).",
     )
     return templates.TemplateResponse(
         request=request,
@@ -1116,10 +1128,9 @@ def reenviar_confirmacao(
     if not usuario:
         return RedirectResponse(url="/login", status_code=303)
     auth.disparar_confirmacao_email(usuario)
-    msg_reenvio = (
-        "Enviamos um link para o seu e-mail."
-        if auth.email_configurado()
-        else "Link de confirmação reenviado! Confira o terminal ou seu e-mail."
+    msg_reenvio = _msg_email(
+        "Enviamos um link para o seu e-mail.",
+        "Link de confirmação reenviado! Confira o terminal ou seu e-mail.",
     )
     return RedirectResponse(url=f"/watchlist?msg={quote_plus(msg_reenvio)}", status_code=303)
 

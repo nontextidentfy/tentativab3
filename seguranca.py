@@ -144,7 +144,7 @@ def _imprimir_seguro(texto: str):
 
 def _mascarar_email(email: str) -> str:
     usuario, _, dominio = (email or "").partition("@")
-    return f"{usuario[:2]}***@{dominio}"
+    return f"{usuario[:1]}***@{dominio}"
 
 
 def enviar_email_transacional(destinatario: str, assunto: str, corpo_texto: str):

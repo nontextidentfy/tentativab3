@@ -21,7 +21,12 @@ def test_pagina_404_personalizada(client):
     resp = client.get("/pagina-que-nao-existe")
     assert resp.status_code == 404
     assert "Essa página não existe" in resp.text
-    assert 'href="/"' in resp.text
+    assert "Voltar ao painel" in resp.text and 'href="/analisar?ticker=PETR4"' in resp.text
+
+
+def test_404_em_rota_api_ou_sem_accept_html_continua_json(client):
+    resp = client.get("/api/nao-existe", headers={"Accept": "application/json"})
+    assert resp.status_code == 404 and resp.headers["content-type"].startswith("application/json")
 
 
 def test_erros_http_que_nao_sao_404_continuam_json(client):
@@ -41,6 +46,19 @@ def test_templates_e_textos_sem_travessoes():
 def test_relatorio_markdown_remove_travessoes():
     html = main.renderizar_markdown("Lucro alto — mas dívida alta")
     assert "—" not in html and "Lucro alto, mas dívida alta" in html
+    # Não pode engolir quebras de linha (títulos/listas) nem mexer em intervalos com hífen-en
+    html2 = main.renderizar_markdown("Lucro forte —\n### Riscos\n- item\n\nEntre 2021–2024 a receita subiu")
+    assert "<h3>Riscos</h3>" in html2 and "<li>item</li>" in html2 and "2021–2024" in html2
+
+
+def test_producao_sem_smtp_nao_imprime_email_nem_token(monkeypatch, capsys):
+    monkeypatch.setattr(auth, "EM_PRODUCAO", True)
+    for var in ("SMTP_HOST", "SMTP_USER", "SMTP_PASS"):
+        monkeypatch.delenv(var, raising=False)
+    auth.enviar_email_transacional("maria@exemplo.com", "Confirme", "link com token SEGREDO123")
+    saida = capsys.readouterr().out
+    assert "SEGREDO123" not in saida and "maria@exemplo.com" not in saida
+    assert main._msg_email("ok", "local") == "O envio de e-mail está indisponível no momento. Tente novamente mais tarde ou contate o suporte."
 
 
 def test_termos_tem_cookies_reembolso_e_dados_da_empresa(client):
@@ -101,6 +119,18 @@ def test_pl_baixo_checa_lucro_recorrente():
     assert ok["status"] == "ok"
     sem = _por_gatilho(svc.checar_coerencia_indicadores(_dados(pl=4.0)), "P/L baixo")
     assert sem["status"] == "sem_dado"
+
+
+def test_roe_alto_em_banco_nao_alerta_por_roa():
+    dados = _dados(roe=0.21, roa=0.015, alav=None)
+    dados["Identificacao"] = {"Setor": "Financial Services", "Industria": "Banks - Regional"}
+    c = _por_gatilho(svc.checar_coerencia_indicadores(dados), "ROE alto")
+    assert c["status"] == "sem_dado"
+
+
+def test_pl_projetado_negativo_vira_alerta():
+    c = _por_gatilho(svc.checar_coerencia_indicadores(_dados(pl=5.0, pl_proj=-12.0)), "P/L baixo")
+    assert c["status"] == "alerta" and "prejuízo" in c["leitura"]
 
 
 def test_roe_alto_checa_roa_e_alavancagem():

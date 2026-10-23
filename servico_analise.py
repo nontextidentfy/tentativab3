@@ -1326,11 +1326,11 @@ MAPA_PERFIL_DIDATICO = {
     },
     "KNCR11": {
         "o_que_faz": "Fundo imobiliário de papel da gestora Kinea (Itaú), focado exclusivamente em títulos de crédito imobiliário atrelados à taxa CDI.",
-        "para_quem_vende": "Financiamento de grandes incorporadoras e grupos corporativos de primeira linha (baixo risco de calote).",
-        "como_ganha_dinheiro": "Rende a taxa CDI do Brasil mais um prêmio seguro de juros, funcionando como um gerador de dividendos com altíssima liquidez.",
+        "para_quem_vende": "Financiamento de grandes incorporadoras e grupos corporativos de primeira linha, com histórico de inadimplência menor.",
+        "como_ganha_dinheiro": "Rende a taxa CDI do Brasil mais um prêmio de juros, distribuindo proventos mensais com alta liquidez na B3.",
         "estrutura_controle": "Gerido pela Kinea Investimentos (holding do Grupo Itaú Unibanco) e administrado pela Intrag DTVM.",
         "tipo_controle": "Fundo de Investimento Imobiliário (FII Pós-Fixado)",
-        "contexto_vida_real": "Garante rendimentos mensais protegidos das oscilações de juros, aproveitando a Selic alta para pagar proventos aos cotistas.",
+        "contexto_vida_real": "Busca pagar rendimentos mensais atrelados ao CDI; o valor sobe e desce com a Selic e com a inadimplência dos CRIs.",
         "marcas_cotidiano": "Kinea Rendimentos Imobiliários, Itaú Asset, CRIs Corporativos.",
     },
     "KNIP11": {
@@ -2285,6 +2285,9 @@ def checar_coerencia_indicadores(dados: dict) -> list[dict]:
     rent = d.get("Rentabilidade_e_Eficiencia") or {}
     end = d.get("Endividamento_e_Caixa") or {}
     prov = d.get("Proventos") or {}
+    ide = d.get("Identificacao") or {}
+    # Bancos e seguradoras operam com ROA de 1-2% por natureza; ROE/ROA alto ali não é sinal de alavancagem anormal
+    setor_financeiro = "financ" in str(ide.get("Setor") or "").lower() or any(t in str(ide.get("Industria") or "").lower() for t in ("bank", "banc", "insur", "segur"))
 
     p_l, p_l_proj = numero(val.get("P_L")), numero(val.get("P_L_Projetado"))
     roe, roa = numero(rent.get("ROE")), numero(rent.get("ROA"))
@@ -2310,9 +2313,11 @@ def checar_coerencia_indicadores(dados: dict) -> list[dict]:
     checks = []
     if p_l is not None and 0 < p_l < 8:
         alertas, lidos = [], False
-        if p_l_proj is not None and p_l_proj > 0:
+        if p_l_proj is not None:
             lidos = True
-            if p_l_proj > p_l * 1.3:
+            if p_l_proj <= 0:
+                alertas.append("O mercado projeta prejuízo à frente (P/L projetado negativo): o lucro recente tende a não se repetir.")
+            elif p_l_proj > p_l * 1.3:
                 alertas.append(f"O P/L projetado ({br(p_l_proj, 1)}x) é bem maior que o atual ({br(p_l, 1)}x): o mercado espera lucro menor à frente, sinal de que parte do lucro recente pode não se repetir.")
         if fcl is not None and lucro and lucro > 0:
             lidos = True
@@ -2322,7 +2327,7 @@ def checar_coerencia_indicadores(dados: dict) -> list[dict]:
 
     if roe is not None and roe >= 0.20:
         alertas, lidos = [], False
-        if roa is not None and roa > 0:
+        if roa is not None and roa > 0 and not setor_financeiro:
             lidos = True
             if roe / roa >= 3:
                 alertas.append(f"O retorno sobre os ativos (ROA {br(roa * 100, 1)}%) é bem menor que o ROE: o retorno alto vem de patrimônio pequeno e muita dívida, não da operação.")
