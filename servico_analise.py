@@ -2089,9 +2089,9 @@ TRADUCAO_MULTIPLOS_R1 = {
         "o_que_e": "Percentual de lucro líquido que a empresa gera para cada real de patrimônio próprio investido.",
         "status_empresa": "ROE acima de 15% indica uma máquina excelente de capital; acima de 20% coloca a empresa entre as mais rentáveis do país.",
         "como_avaliar": "Empresas com alto ROE sustentável conseguem reinvestir em si mesmas e crescer sem precisar se endividar excessivamente.",
-        "impacto_bolso": "Quanto maior o ROE, mais rápido a empresa multiplica o valor das suas ações e maior o potencial de pagar dividendos crescentes.",
-        "bolso": "Quanto maior o ROE, mais rápido a empresa multiplica seu patrimônio e seus proventos.",
-        "impacto": "Quanto maior o ROE, mais rápido a empresa multiplica seu patrimônio e seus proventos.",
+        "impacto_bolso": "ROE alto mostra que a empresa gera mais lucro por real de patrimônio; isso não garante valorização da ação nem dividendos crescentes.",
+        "bolso": "ROE alto significa mais lucro por real de patrimônio, sem garantia de valorização ou de proventos crescentes.",
+        "impacto": "ROE alto significa mais lucro por real de patrimônio, sem garantia de valorização ou de proventos crescentes.",
     },
     "GRAHAM": {
         "nome": "Preço Justo de Benjamin Graham",
@@ -2099,19 +2099,19 @@ TRADUCAO_MULTIPLOS_R1 = {
         "o_que_e": "Fórmula matemática clássica √(22,5 × LPA × VPA) desenvolvida pelo mentor de Warren Buffett para encontrar ações com margem de segurança.",
         "status_empresa": "Cotação abaixo do Preço Graham indica margem de segurança; cotação acima indica ausência de desconto pela métrica clássica.",
         "como_avaliar": "Não se aplica a Fundos Imobiliários nem a empresas com prejuízo contábil recente.",
-        "impacto_bolso": "Ajuda você a nunca pagar caro demais por uma ação, protegendo seu patrimônio de comprar no topo da euforia.",
-        "bolso": "Protege seu patrimônio de comprar no topo da euforia, exigindo margem de desconto.",
-        "impacto": "Protege seu patrimônio de comprar no topo da euforia, exigindo margem de desconto.",
+        "impacto_bolso": "Serve como referência para comparar o preço com lucro e patrimônio contábil; não impede perdas.",
+        "bolso": "Referência de preço que exige margem de desconto; não impede perdas.",
+        "impacto": "Referência de preço que exige margem de desconto; não impede perdas.",
     },
     "BAZIN": {
         "nome": "Preço Teto de Décio Bazin",
-        "analogia": "O limite prudente para viver de renda. É o valor máximo a pagar por uma ação para que o dividendo pingando no seu bolso nunca fique abaixo de 6% ao ano.",
+        "analogia": "O limite prudente para viver de renda. É o valor máximo a pagar por uma ação em que o dividendo dos últimos 12 meses ainda representa 6% ao ano sobre o valor pago.",
         "o_que_e": "Cálculo baseado na regra de Décio Bazin que divide os proventos dos últimos 12 meses por 0,06 (retorno mínimo esperado em dividendos).",
-        "status_empresa": "Ação abaixo do teto de Bazin garante rendimento passivo superior a 6% ao ano; acima do teto, a rentabilidade de proventos fica diluída.",
+        "status_empresa": "Ação abaixo do teto de Bazin significa que os proventos dos últimos 12 meses superaram 6% do preço atual, sem garantia para o próximo ano; acima do teto, a rentabilidade de proventos fica diluída.",
         "como_avaliar": "Métrica de ouro para estratégias previdenciárias de aposentadoria com ações pagadoras de proventos.",
-        "impacto_bolso": "Garante que cada real colocado na ação gere renda passiva gorda e previsível para cobrir seus boletos e reinvestir.",
-        "bolso": "Garante renda passiva mínima de 6% ao ano pingando diretamente na sua conta.",
-        "impacto": "Garante renda passiva mínima de 6% ao ano pingando diretamente na sua conta.",
+        "impacto_bolso": "Indica se os proventos dos últimos 12 meses equivalem a 6% do preço atual. Proventos futuros dependem dos lucros da empresa e podem cair ou cessar.",
+        "bolso": "Referência de 6% ao ano calculada sobre proventos passados, sem garantia de repetição.",
+        "impacto": "Referência de 6% ao ano calculada sobre proventos passados, sem garantia de repetição.",
     },
     "DIVIDA_EBITDA": {
         "nome": "Alavancagem Financeira (Dívida Líquida / EBITDA)",
@@ -2119,9 +2119,9 @@ TRADUCAO_MULTIPLOS_R1 = {
         "o_que_e": "Mede o endividamento líquido da empresa em relação ao seu lucro operacional anual em caixa.",
         "status_empresa": "Abaixo de 2,0x é considerada saudável; entre 2,0x e 3,5x exige atenção; acima de 3,5x indica endividamento de risco que consome lucros em juros.",
         "como_avaliar": "Empresas com concessões reguladas previsíveis (elétricas) toleram dívidas maiores do que empresas de varejo e consumo cíclico.",
-        "impacto_bolso": "Dívida controlada significa que o lucro da empresa vai para a sua conta em dividendos, e não para pagar juros aos bancos.",
-        "bolso": "Dívida controlada garante que o lucro se transforme em dividendos para você, não em juros bancários.",
-        "impacto": "Dívida controlada garante que o lucro se transforme em dividendos para você, não em juros bancários.",
+        "impacto_bolso": "Dívida controlada deixa mais espaço para o lucro virar dividendos, em vez de pagar juros aos bancos.",
+        "bolso": "Dívida controlada ajuda o lucro a virar dividendos para você, em vez de juros bancários.",
+        "impacto": "Dívida controlada ajuda o lucro a virar dividendos para você, em vez de juros bancários.",
     },
 }
 TRADUCAO_MULTIPLOS_R1["p_l"] = TRADUCAO_MULTIPLOS_R1["P_L"]
@@ -2271,6 +2271,101 @@ def traduzir_multiplos_ativo(dados: dict) -> dict:
     return resultado
 
 
+def checar_coerencia_indicadores(dados: dict) -> list[dict]:
+    """
+    Quando um indicador chama atenção sozinho, confere o indicador que costuma desmenti-lo:
+    P/L baixo -> lucro recorrente; ROE alto -> ROIC (aproximado por ROA) + alavancagem;
+    lucro crescendo -> caixa operacional; yield alto -> payout + FCL; crescimento -> dívida líquida/EBITDA.
+    Só entra na lista a checagem cujo gatilho disparou. Sem dado na fonte, o status é "sem_dado", nunca um chute.
+    """
+    d = dados or {}
+    if (d.get("Metadados") or {}).get("tipo") == "FII" or (d.get("Identificacao") or {}).get("Tipo_Codigo") == "FII":
+        return []
+    val = d.get("Valuation") or {}
+    rent = d.get("Rentabilidade_e_Eficiencia") or {}
+    end = d.get("Endividamento_e_Caixa") or {}
+    prov = d.get("Proventos") or {}
+
+    p_l, p_l_proj = numero(val.get("P_L")), numero(val.get("P_L_Projetado"))
+    roe, roa = numero(rent.get("ROE")), numero(rent.get("ROA"))
+    cresc_lucro, cresc_receita = numero(rent.get("Crescimento_Lucros_YoY")), numero(rent.get("Crescimento_Receita_YoY"))
+    margem_liq, receita = numero(rent.get("Margem_Liquida")), numero(end.get("Receita_Total_12m"))
+    fcl, fco = numero(end.get("Fluxo_Caixa_Livre")), numero(end.get("Fluxo_Caixa_Operacional"))
+    alav = numero(end.get("Divida_Liquida_sobre_EBITDA"))
+    dy, payout = numero(prov.get("Dividend_Yield_Real_12m")), numero(prov.get("Payout_Ratio"))
+    lucro = (margem_liq * receita) if (margem_liq is not None and receita) else None
+
+    ROTULO = {"alerta": "Atenção", "ok": "Confere", "sem_dado": "Sem dado na fonte"}
+    CLASSE = {"alerta": "badge-neg", "ok": "badge-pos", "sem_dado": ""}
+
+    def item(gatilho, pergunta, alertas, dados_lidos):
+        if alertas:
+            status, leitura = "alerta", " ".join(alertas)
+        elif dados_lidos:
+            status, leitura = "ok", "O indicador de contraprova não desmente o número bom."
+        else:
+            status, leitura = "sem_dado", "A fonte (Yahoo Finance) não trouxe o dado de contraprova. Confira no release de resultados da empresa antes de confiar no número."
+        return {"gatilho": gatilho, "pergunta": pergunta, "status": status, "rotulo": ROTULO[status], "classe_css": CLASSE[status], "leitura": leitura}
+
+    checks = []
+    if p_l is not None and 0 < p_l < 8:
+        alertas, lidos = [], False
+        if p_l_proj is not None and p_l_proj > 0:
+            lidos = True
+            if p_l_proj > p_l * 1.3:
+                alertas.append(f"O P/L projetado ({br(p_l_proj, 1)}x) é bem maior que o atual ({br(p_l, 1)}x): o mercado espera lucro menor à frente, sinal de que parte do lucro recente pode não se repetir.")
+        if fcl is not None and lucro and lucro > 0:
+            lidos = True
+            if fcl < 0.5 * lucro:
+                alertas.append("O caixa livre gerado é menos da metade do lucro contábil: o lucro no papel não está virando dinheiro no caixa.")
+        checks.append(item(f"P/L baixo ({br(p_l, 1)}x)", "O lucro é recorrente ou veio de um evento único?", alertas, lidos))
+
+    if roe is not None and roe >= 0.20:
+        alertas, lidos = [], False
+        if roa is not None and roa > 0:
+            lidos = True
+            if roe / roa >= 3:
+                alertas.append(f"O retorno sobre os ativos (ROA {br(roa * 100, 1)}%) é bem menor que o ROE: o retorno alto vem de patrimônio pequeno e muita dívida, não da operação.")
+        if alav is not None:
+            lidos = True
+            if alav > 3.5:
+                alertas.append(f"Alavancagem de {br(alav, 1)}x EBITDA: parte do lucro vai para juros antes de chegar ao acionista.")
+        # shortcut: ROIC nao existe no yfinance.info; ROA entra como aproximacao, trocar quando houver fonte de EBIT/capital investido
+        checks.append(item(f"ROE alto ({br(roe * 100, 1)}%)", "O retorno vem da operação (ROIC, aproximado pelo ROA) ou de alavancagem?", alertas, lidos))
+
+    if cresc_lucro is not None and cresc_lucro >= 0.10:
+        alertas, lidos = [], False
+        if fco is not None:
+            lidos = True
+            if fco < 0:
+                alertas.append("O caixa operacional é negativo: o lucro cresce no papel, mas a operação consome dinheiro.")
+            elif lucro and lucro > 0 and fco < 0.7 * lucro:
+                alertas.append("O caixa operacional cobre menos de 70% do lucro: o crescimento pode estar vindo de vendas a prazo ou de ajustes contábeis.")
+        checks.append(item(f"Lucro crescendo ({br(cresc_lucro * 100, 1)}% ao ano)", "O fluxo de caixa operacional acompanha o lucro?", alertas, lidos))
+
+    if dy is not None and dy >= 0.08:
+        alertas, lidos = [], False
+        if payout is not None:
+            lidos = True
+            if payout > 1.0:
+                alertas.append(f"Payout de {br(payout * 100, 0)}%: a empresa distribuiu mais do que lucrou, o que não se sustenta sem queimar caixa ou tomar dívida.")
+        if fcl is not None:
+            lidos = True
+            if fcl < 0:
+                alertas.append("O caixa livre é negativo: os dividendos de hoje saem de dívida ou de reservas, não da geração de caixa.")
+        checks.append(item(f"Yield alto ({br(dy * 100, 1)}% em 12 meses)", "O payout e o caixa livre sustentam esse dividendo?", alertas, lidos))
+
+    cresc = max([c for c in (cresc_receita, cresc_lucro) if c is not None], default=None)
+    if cresc is not None and cresc >= 0.15:
+        alertas, lidos = [], False
+        if alav is not None:
+            lidos = True
+            if alav > 3.5:
+                alertas.append(f"Dívida líquida de {br(alav, 1)}x EBITDA: o crescimento está sendo financiado com dívida cara, e os juros podem comer o lucro futuro.")
+        checks.append(item(f"Crescimento forte ({br(cresc * 100, 1)}% ao ano)", "A dívida líquida/EBITDA está sob controle?", alertas, lidos))
+    return checks
+
+
 def garantir_blocos_didaticos(dados: dict) -> dict:
     if not isinstance(dados, dict):
         return dados
@@ -2301,6 +2396,7 @@ def garantir_blocos_didaticos(dados: dict) -> dict:
     dados.pop("Cenarios_Projetados", None)
     if "Multiplos_Traduzidos" not in dados or not dados["Multiplos_Traduzidos"]:
         dados["Multiplos_Traduzidos"] = traduzir_multiplos_ativo(dados)
+    dados["Checagens_Cruzadas"] = checar_coerencia_indicadores(dados)
     return dados
 
 def extrair_raio_x_b3(ticker_usuario: str) -> dict:
@@ -2517,6 +2613,7 @@ def extrair_raio_x_b3(ticker_usuario: str) -> dict:
             "Divida_Liquida_sobre_EBITDA": alavancagem,
             "Liquidez_Corrente": liquidez,
             "Fluxo_Caixa_Livre": numero(info.get("freeCashflow")),
+            "Fluxo_Caixa_Operacional": numero(info.get("operatingCashflow")),
         },
         "Proventos": {
             "Dividend_Yield_Real_12m": round(dy_12m_razao, 6),
@@ -2766,6 +2863,7 @@ REGRAS:
 3. Para FII, priorize P/VP, Dividend Yield, liquidez e consistência dos rendimentos.
 4. Responda em português do Brasil, em Markdown, usando exatamente os 4 títulos '###' abaixo (máximo 450 palavras).
 5. Encerre lembrando que não é recomendação formal de compra ou venda.
+6. Não use travessões (—); separe ideias com vírgula, ponto ou dois-pontos.
 
 DADOS DO ATIVO (JSON):
 {json.dumps(dados_prompt, ensure_ascii=False, indent=2)}

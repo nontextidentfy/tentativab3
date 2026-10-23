@@ -91,7 +91,7 @@
   }
   .didatica-destaque {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
     gap: 14px;
     margin-top: 1.25rem;
   }
@@ -132,7 +132,7 @@
   }
   .grid-alternativas {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(250px, 100%), 1fr));
     gap: 16px;
     margin-bottom: 2rem;
   }
@@ -189,6 +189,9 @@
   .card-alt-link {
     width: 100%;
     text-align: center;
+  }
+  @media (max-width: 768px) {
+    .secao-didatica, .nao-listada-hero { padding: 1.25rem; }
   }
 </style>
 {% endblock %}

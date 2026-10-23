@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="painel" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-  <div>
-    <h2 style="margin:0; font-size:1.35rem;">👤 Olá, {{ usuario.nome }}</h2>
+  <div style="min-width:0; overflow-wrap:anywhere;">
+    <h1 style="margin:0; font-size:1.35rem;">👤 Olá, {{ usuario.nome }}</h1>
     <div style="color:var(--suave); font-size:.88rem;">
       E-mail: {{ usuario.email }} • Perfil: <span class="badge">{{ usuario.perfil_investidor }}</span>
       {% if usuario.email_confirmado %}
@@ -23,18 +23,18 @@
 </div>
 
 <div class="painel">
-  <h3>📌 Adicionar Ativo e Alerta de Preço Privado</h3>
+  <h2>📌 Adicionar Ativo e Alerta de Preço Privado</h2>
   <form method="post" action="/watchlist/adicionar" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
-    <input class="input-padrao" type="text" name="ticker" placeholder="Empresa ou ticker (ex: Sanepar, WEGE3, HGLG11)" required minlength="2" maxlength="60">
-    <input class="input-padrao" type="number" step="0.01" name="preco_alvo" placeholder="Preço Alvo de Alerta R$ (opcional)">
-    <input class="input-padrao" type="text" name="notas" maxlength="500" placeholder="Suas anotações privadas sobre o balanço/ativo...">
+    <input class="input-padrao" type="text" name="ticker" aria-label="Empresa ou ticker" placeholder="Empresa ou ticker (ex: Sanepar, WEGE3, HGLG11)" required minlength="2" maxlength="60">
+    <input class="input-padrao" type="number" step="0.01" name="preco_alvo" aria-label="Preço alvo de alerta em reais (opcional)" placeholder="Preço Alvo de Alerta R$ (opcional)">
+    <input class="input-padrao" type="text" name="notas" maxlength="500" aria-label="Anotações privadas" placeholder="Suas anotações privadas sobre o balanço/ativo...">
     <button type="submit">Salvar na Watchlist</button>
   </form>
 </div>
 
 <div class="painel">
-  <h3>⭐ Meus Ativos Monitorados (Visível somente para você)</h3>
-  <div style="overflow-x:auto;">
+  <h2>⭐ Meus Ativos Monitorados (Visível somente para você)</h2>
+  <div style="overflow-x:auto;" tabindex="0">
     <table class="tabela">
       <thead>
         <tr>
@@ -63,10 +63,10 @@
             {% elif item.preco_alvo %}
               <span style="color:var(--suave);">Aguardando alvo</span>
             {% else %}
-              <span style="color:var(--apagado);">—</span>
+              <span style="color:var(--apagado);">Sem alerta</span>
             {% endif %}
           </td>
-          <td>{{ item.notas or '—' }}</td>
+          <td>{{ item.notas or 'Sem notas' }}</td>
           <td>
             <form method="post" action="/watchlist/remover/{{ item.id }}" style="margin:0;">
               <button type="submit" class="btn btn-sec" style="padding:4px 10px; font-size:.78rem;">Remover</button>
@@ -86,12 +86,12 @@
 </div>
 
 <div class="painel" style="border-color:#7f1d1d;">
-  <h3 style="color:var(--neg);">🛡️ Privacidade e Exclusão de Conta (LGPD)</h3>
+  <h2 style="color:var(--neg);">🛡️ Privacidade e Exclusão de Conta (LGPD)</h2>
   <p style="font-size:.86rem; color:var(--suave); margin-top:0;">
     Você pode excluir sua conta e apagar todos os seus dados e monitoramentos do nosso banco de dados a qualquer momento.
   </p>
   <form method="post" action="/conta/excluir" onsubmit="return confirm('Tem certeza que deseja excluir permanentemente sua conta e todos os seus dados?');" style="display:flex; gap:10px; flex-wrap:wrap; max-width:460px;">
-    <input class="input-padrao" type="password" name="senha_confirmacao" placeholder="Confirme sua senha atual" required>
+    <input class="input-padrao" type="password" name="senha_confirmacao" aria-label="Confirme sua senha atual" placeholder="Confirme sua senha atual" required>
     <button type="submit" class="btn btn-perigo">Excluir Minha Conta Permanentemente</button>
   </form>
 </div>

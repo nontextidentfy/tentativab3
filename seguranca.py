@@ -142,6 +142,11 @@ def _imprimir_seguro(texto: str):
         pass
 
 
+def _mascarar_email(email: str) -> str:
+    usuario, _, dominio = (email or "").partition("@")
+    return f"{usuario[:2]}***@{dominio}"
+
+
 def enviar_email_transacional(destinatario: str, assunto: str, corpo_texto: str):
     smtp_host = os.getenv("SMTP_HOST")
     smtp_port = int(os.getenv("SMTP_PORT") or "587")
@@ -150,6 +155,10 @@ def enviar_email_transacional(destinatario: str, assunto: str, corpo_texto: str)
     remetente = os.getenv("SMTP_FROM") or smtp_user or "nao-responda@investidoria.com.br"
 
     if not email_configurado():
+        if EM_PRODUCAO:
+            # Em produção nunca imprime link com token nem e-mail do usuário nos logs da hospedagem
+            log.error("SMTP não configurado; e-mail '%s' para %s não foi enviado", assunto, _mascarar_email(destinatario))
+            return
         _imprimir_seguro("\n" + "=" * 75)
         _imprimir_seguro(f"📧 [E-MAIL TRANSACIONAL] Para: {destinatario} | Assunto: {assunto}")
         _imprimir_seguro("-" * 75)
@@ -169,7 +178,7 @@ def enviar_email_transacional(destinatario: str, assunto: str, corpo_texto: str)
             server.login(smtp_user, smtp_pass)
             server.send_message(msg)
     except Exception:
-        log.exception("Falha ao enviar e-mail via SMTP para %s", destinatario)
+        log.exception("Falha ao enviar e-mail via SMTP para %s", _mascarar_email(destinatario))
 
 
 def disparar_confirmacao_email(usuario: Usuario) -> str:

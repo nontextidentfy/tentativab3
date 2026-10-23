@@ -1,41 +1,79 @@
 {% extends "base.html" %}
 
-{% block title %}Termos de Uso e Política de Privacidade | Investidor IA{% endblock %}
+{% block title %}Termos de Uso, Privacidade, Cookies e Reembolso | Investidor IA{% endblock %}
+{% block descricao %}Termos de uso, isenção CVM, política de privacidade (LGPD), cookies, reembolso e dados legais do Investidor IA.{% endblock %}
 
 {% block content %}
 <div class="painel" style="line-height:1.7;">
-  <h3>📜 1. Termos de Uso e Isenção de Responsabilidade (CVM)</h3>
+  <h1 id="termos">📜 1. Termos de Uso e Isenção de Responsabilidade (CVM)</h1>
   <p style="color:var(--suave); font-size:.92rem;">
     O <strong>Investidor IA</strong> é uma ferramenta tecnológica de agregação de dados financeiros públicos e automação de leitura contábil.
-    Nenhuma informação, cálculo (como fórmulas matemáticas de Graham ou Bazin) ou texto síntese gerado por inteligência artificial nesta plataforma
+    Nenhuma informação, cálculo (como fórmulas matemáticas de Graham ou Bazin), simulação ou texto gerado por inteligência artificial nesta plataforma
     constitui recomendação, oferta, consultoria ou relatório de análise de valores mobiliários nos termos da Resolução CVM nº 20/2021.
+    Os dados vêm de fontes públicas (Yahoo Finance e Banco Central) e podem conter atrasos ou erros. Rentabilidade passada não garante resultado futuro.
     Toda decisão de investimento é de responsabilidade exclusiva do usuário.
   </p>
 
-  <h3 style="margin-top:2rem;">🔒 2. Política de Privacidade e Proteção de Dados (LGPD - Lei nº 13.709/2018)</h3>
+  <h2 id="privacidade" style="margin-top:2rem;">🔒 2. Política de Privacidade e Proteção de Dados (LGPD, Lei nº 13.709/2018)</h2>
   <ul style="color:var(--suave); font-size:.92rem;">
     <li>
-      <strong>Dados Coletados:</strong> Coletamos nome, endereço de e-mail, perfil de investidor, data e hora de aceite dos termos de uso,
-      e itens da sua Watchlist privada (ativos monitorados, preço-alvo de alerta e anotações pessoais).
+      <strong>Dados coletados e para quê:</strong> nome e e-mail (criar a conta, confirmar o e-mail e recuperar a senha);
+      senha (acesso à conta, guardada apenas como hash Argon2id); perfil de investidor (o foco de análise escolhido no cadastro, exibido no seu painel);
+      data e hora do aceite dos termos (prova do consentimento); itens da sua Watchlist (ativos, preço-alvo e anotações).
+      Não coletamos CPF, telefone, endereço, dados bancários nem dados de navegação.
     </li>
     <li>
-      <strong>Uso do Endereço IP:</strong> O endereço IP da requisição é utilizado exclusivamente em tempo de execução para controle de limite de uso
-      (rate limiting contra abusos), sem armazenamento permanente vinculado à sua conta.
+      <strong>Base legal:</strong> execução do contrato (art. 7º, V) para os dados da conta e da Watchlist, e cumprimento de obrigação legal
+      (art. 7º, II) para o registro do aceite dos termos.
     </li>
     <li>
-      <strong>Segurança das Senhas:</strong> Suas senhas jamais são armazenadas em texto puro; utilizamos o algoritmo criptográfico <strong>Argon2id</strong>.
+      <strong>Endereço IP:</strong> o endereço IP é usado apenas em tempo de execução para limitar o volume de requisições por minuto (proteção contra abuso),
+      sem armazenamento permanente vinculado à sua conta.
     </li>
     <li>
-      <strong>Isolamento e Privacidade:</strong> Sua lista de monitoramento, preços-alvo e anotações são estritamente privados e visíveis apenas mediante autenticação na sua conta.
+      <strong>Compartilhamento:</strong> não vendemos nem compartilhamos seus dados com terceiros para fins comerciais.
+      As consultas de ativos são feitas a fontes públicas sem enviar seus dados pessoais.
     </li>
     <li>
-      <strong>Prazo de Retenção:</strong> Os dados cadastrais e de Watchlist são mantidos enquanto sua conta estiver ativa.
-      O histórico público de cotações e análises de ativos tem prazo de retenção de <strong>90 dias</strong> (preservando-se apenas a última cotação de referência de cada ativo).
+      <strong>Operadores e transferência internacional (art. 33):</strong> o banco de dados fica no Neon e a hospedagem no Render, que podem manter servidores fora do Brasil;
+      e-mails transacionais saem por um provedor SMTP. As consultas ao Yahoo Finance, ao Banco Central e à IA do Google (Gemini) enviam apenas o ticker e dados públicos do ativo, nunca seus dados pessoais.
     </li>
     <li>
-      <strong>Direito de Exclusão e Canal LGPD:</strong> Em cumprimento ao Art. 18 da LGPD, você possui um botão direto no painel da sua conta para excluir permanentemente seu cadastro e todos os registros associados.
-      Para solicitações adicionais, dúvidas ou exercício de direitos do titular de dados (LGPD), entre em contato pelo canal oficial: <strong>[E-MAIL DE CONTATO]</strong>.
+      <strong>Prazo de retenção:</strong> dados cadastrais e de Watchlist ficam guardados enquanto sua conta estiver ativa.
+      O histórico público de cotações e análises tem retenção de <strong>90 dias</strong> (preservando-se apenas a última cotação de referência de cada ativo).
     </li>
+    <li>
+      <strong>Seus direitos (art. 18):</strong> confirmar o tratamento, acessar, corrigir, anonimizar, portar ou eliminar seus dados, e revogar o consentimento.
+      A exclusão completa da conta e de todos os registros é feita por você mesmo, pelo botão no painel da Watchlist.
+      Para os demais pedidos, escreva ao encarregado de dados (DPO): <strong>[E-MAIL DO ENCARREGADO/DPO]</strong>. Respondemos em até 15 dias.
+    </li>
+  </ul>
+
+  <h2 id="cookies" style="margin-top:2rem;">🍪 3. Política de Cookies</h2>
+  <p style="color:var(--suave); font-size:.92rem;">
+    Usamos um único cookie, <strong>inv_ia_session</strong>, estritamente necessário para manter você conectado após o login.
+    Ele dura 7 dias, é marcado como HttpOnly e SameSite=Lax e não é lido por terceiros. Por ser essencial ao serviço que você pediu,
+    não exige consentimento prévio (art. 7º, V, da LGPD). Não usamos cookies de rastreamento, analytics ou publicidade,
+    nem scripts de terceiros. Se isso mudar, esta página e um aviso na tela serão atualizados antes.
+    Você pode apagar o cookie saindo da conta ou limpando os dados do navegador.
+  </p>
+
+  <h2 id="reembolso" style="margin-top:2rem;">💳 4. Política de Reembolso</h2>
+  <p style="color:var(--suave); font-size:.92rem;">
+    Hoje todas as funcionalidades do Investidor IA são gratuitas e não há cobrança de nenhum valor.
+    Se um plano pago for oferecido no futuro, valerá o direito de arrependimento de 7 dias a partir da contratação (art. 49 do Código de Defesa do Consumidor),
+    com devolução integral pelo mesmo meio de pagamento em até 10 dias úteis, mediante pedido pelo e-mail de contato abaixo.
+    Após esse prazo, assinaturas poderão ser canceladas a qualquer momento, sem renovação da cobrança seguinte.
+  </p>
+
+  <h2 id="empresa" style="margin-top:2rem;">🏢 5. Dados Legais e Contato</h2>
+  <ul style="color:var(--suave); font-size:.92rem;">
+    <li><strong>Razão social:</strong> [RAZÃO SOCIAL]</li>
+    <li><strong>CNPJ:</strong> [00.000.000/0001-00]</li>
+    <li><strong>Endereço:</strong> [ENDEREÇO COMPLETO, CIDADE/UF, CEP]</li>
+    <li><strong>E-mail de contato e suporte:</strong> [E-MAIL DE CONTATO]</li>
+    <li><strong>Encarregado de dados (DPO):</strong> [NOME E E-MAIL DO ENCARREGADO/DPO]</li>
+    <li><strong>Última atualização destes termos:</strong> [DATA]</li>
   </ul>
 </div>
 {% endblock %}

@@ -3,23 +3,23 @@
 {% block content %}
 <div class="painel" style="max-width:480px; margin:2rem auto;">
   {% if modo == "cadastro" %}
-    <h3>🔐 Criar Conta Segura</h3>
+    <h1>🔐 Criar Conta Segura</h1>
     <form method="post" action="/cadastro" style="display:flex; flex-direction:column; gap:12px;">
       <div>
-        <label style="font-size:.82rem; color:var(--suave);">Nome Completo</label>
-        <input class="input-padrao" type="text" name="nome" required minlength="2" maxlength="120" placeholder="Seu nome">
+        <label style="font-size:.82rem; color:var(--suave);" for="campo-nome">Nome Completo</label>
+        <input id="campo-nome" class="input-padrao" type="text" name="nome" required minlength="2" maxlength="120" placeholder="Seu nome">
       </div>
       <div>
-        <label style="font-size:.82rem; color:var(--suave);">E-mail</label>
-        <input class="input-padrao" type="email" name="email" required minlength="5" maxlength="150" placeholder="seu@email.com">
+        <label style="font-size:.82rem; color:var(--suave);" for="campo-email">E-mail</label>
+        <input id="campo-email" class="input-padrao" type="email" name="email" required minlength="5" maxlength="150" placeholder="seu@email.com">
       </div>
       <div>
-        <label style="font-size:.82rem; color:var(--suave);">Senha (mínimo 8 caracteres, protegida com Argon2)</label>
-        <input class="input-padrao" type="password" name="senha" required minlength="8" maxlength="100" placeholder="••••••••">
+        <label style="font-size:.82rem; color:var(--suave);" for="campo-senha">Senha (mínimo 8 caracteres, protegida com Argon2)</label>
+        <input id="campo-senha" class="input-padrao" type="password" name="senha" required minlength="8" maxlength="100" placeholder="••••••••">
       </div>
       <div>
-        <label style="font-size:.82rem; color:var(--suave);">Foco de Análise</label>
-        <select class="input-padrao" name="perfil">
+        <label style="font-size:.82rem; color:var(--suave);" for="campo-perfil">Foco de Análise</label>
+        <select id="campo-perfil" class="input-padrao" name="perfil">
           {% for valor_perfil, rotulo_perfil in PERFIS_OPCOES %}
             <option value="{{ valor_perfil }}">{{ rotulo_perfil }}</option>
           {% endfor %}
@@ -36,10 +36,10 @@
     </p>
 
   {% elif modo == "esqueci" %}
-    <h3>🔑 Recuperar Senha</h3>
+    <h1>🔑 Recuperar Senha</h1>
     <p style="font-size:.88rem; color:var(--suave);">Informe seu e-mail para receber um link seguro de redefinição (válido por 1 hora).</p>
     <form method="post" action="/esqueci-senha" style="display:flex; flex-direction:column; gap:12px;">
-      <input class="input-padrao" type="email" name="email" required minlength="5" maxlength="150" placeholder="seu@email.com">
+      <input class="input-padrao" type="email" name="email" aria-label="E-mail" required minlength="5" maxlength="150" placeholder="seu@email.com">
       <button type="submit">Enviar Link de Recuperação</button>
     </form>
     <p style="text-align:center; font-size:.85rem; margin-top:1rem;">
@@ -47,23 +47,23 @@
     </p>
 
   {% elif modo == "redefinir" %}
-    <h3>🔒 Definir Nova Senha</h3>
+    <h1>🔒 Definir Nova Senha</h1>
     <form method="post" action="/redefinir-senha/{{ token }}" style="display:flex; flex-direction:column; gap:12px;">
-      <label style="font-size:.82rem; color:var(--suave);">Nova Senha (mínimo 8 caracteres)</label>
-      <input class="input-padrao" type="password" name="nova_senha" required minlength="8" maxlength="100" placeholder="••••••••">
+      <label style="font-size:.82rem; color:var(--suave);" for="campo-nova_senha">Nova Senha (mínimo 8 caracteres)</label>
+      <input id="campo-nova_senha" class="input-padrao" type="password" name="nova_senha" required minlength="8" maxlength="100" placeholder="••••••••">
       <button type="submit">Salvar Nova Senha</button>
     </form>
 
   {% else %}
-    <h3>🔑 Entrar na Plataforma</h3>
+    <h1>🔑 Entrar na Plataforma</h1>
     <form method="post" action="/login" style="display:flex; flex-direction:column; gap:12px;">
       <div>
-        <label style="font-size:.82rem; color:var(--suave);">E-mail</label>
-        <input class="input-padrao" type="email" name="email" required minlength="5" maxlength="150" placeholder="seu@email.com">
+        <label style="font-size:.82rem; color:var(--suave);" for="campo-email-2">E-mail</label>
+        <input id="campo-email-2" class="input-padrao" type="email" name="email" required minlength="5" maxlength="150" placeholder="seu@email.com">
       </div>
       <div>
-        <label style="font-size:.82rem; color:var(--suave);">Senha</label>
-        <input class="input-padrao" type="password" name="senha" required maxlength="100" placeholder="••••••••">
+        <label style="font-size:.82rem; color:var(--suave);" for="campo-senha-2">Senha</label>
+        <input id="campo-senha-2" class="input-padrao" type="password" name="senha" required maxlength="100" placeholder="••••••••">
       </div>
       <button type="submit">Entrar</button>
     </form>

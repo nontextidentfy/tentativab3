@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block title %}Investidor IA | Descomplicando Investimentos na B3 com Valuation Inteligente{% endblock %}
+{% block descricao %}Pesquise qualquer empresa ou FII da B3 pelo nome ou ticker e veja valuation, balanços, proventos e um simulador realista de aportes, sem economês.{% endblock %}
 
 {% block barra_busca_padrao %}{# Oculta a busca do topo para que a Hero Search seja a principal #}{% endblock %}
 
@@ -64,6 +65,8 @@
   }
   .hero-search-box input:focus {
     box-shadow: none;
+    outline: 2px solid var(--destaque);
+    outline-offset: 2px;
   }
   .hero-search-box button {
     padding: 13px 24px;
@@ -203,7 +206,7 @@
 
   <h1 class="hero-title">
     Viu um guru prometendo renda fácil na Bolsa?
-    <span class="gradient-text">Digite o nome da empresa aqui</span> e descubra a verdade com cálculos reais em segundos.
+    <span class="gradient-text">Digite o nome da empresa aqui</span> e veja os números reais em segundos.
   </h1>
 
   <p class="hero-subtitle">
@@ -213,7 +216,7 @@
   <!-- BUSCA INTEGRADA NA HERO -->
   <form class="search-box hero-search-box" method="get" action="/analisar" autocomplete="off">
     <div class="busca-wrap">
-      <input type="text" id="campo-busca" name="ticker"
+      <input type="text" id="campo-busca" name="ticker" aria-label="Nome da marca, empresa ou ticker da B3"
              placeholder="Digite o nome da marca (Ex: Magalu, Posto Ipiranga, Sicredi) ou o ticker (Ex: PETR4, VALE3)..."
              required minlength="2" maxlength="60" autocomplete="off" spellcheck="false"
              role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sugestoes-busca">
@@ -251,13 +254,13 @@
 
 <!-- 3 PILARES DE VALOR -->
 <section class="pillars-section">
-  <div class="secao-titulo">
+  <h2 class="secao-titulo">
     <span>💎 Por que usar o Investidor IA</span>
-  </div>
+  </h2>
   <div class="pillars-grid">
     <div class="pillar-card">
       <span class="pillar-icon">🔍</span>
-      <h4 class="pillar-title">Leitura Automática de Balanços</h4>
+      <h2 class="pillar-title">Leitura Automática de Balanços</h2>
       <p class="pillar-desc">
         Varredura instantânea de margens, ROE, dívida líquida sobre EBITDA e consistência de lucros para proteger seu capital contra armadilhas da Bolsa.
       </p>
@@ -265,7 +268,7 @@
 
     <div class="pillar-card">
       <span class="pillar-icon">📐</span>
-      <h4 class="pillar-title">Valuation 1-Clique sem Economês</h4>
+      <h2 class="pillar-title">Valuation 1-Clique sem Economês</h2>
       <p class="pillar-desc">
         Preço Justo de Graham e Preço Teto de Bazin (6%) calculados automaticamente com margem de segurança visual para balizar seu ponto de entrada.
       </p>
@@ -273,7 +276,7 @@
 
     <div class="pillar-card">
       <span class="pillar-icon">📊</span>
-      <h4 class="pillar-title">Monitor de Volume & Risco B3</h4>
+      <h2 class="pillar-title">Monitor de Volume & Risco B3</h2>
       <p class="pillar-desc">
         Acompanhe o volume do dia, média de 10 dias e 3 meses, faixa de 52 semanas e beta de volatilidade do ativo para tomar decisões com dados concretos.
       </p>
@@ -287,7 +290,7 @@
     <h3>🗂️ Base de Ativos Catalogados Recentemente (B3)</h3>
   </div>
 
-  <div class="table-wrapper">
+  <div class="table-wrapper" tabindex="0">
     <table class="tabela">
       <thead>
         <tr>

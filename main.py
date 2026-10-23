@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import os
+import re
 import threading
 from typing import Optional
 from urllib.parse import quote_plus
@@ -11,6 +12,8 @@ from fastapi import FastAPI, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import http_exception_handler as http_exception_handler_padrao
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.gzip import GZipMiddleware
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -104,7 +107,8 @@ ESQUEMAS_URL_PERMITIDOS = ("http://", "https://", "mailto:", "/", "#")
 
 def renderizar_markdown(texto: str) -> str:
     """Converte o relatório (Markdown) em HTML, neutralizando tags brutas e protocolos inseguros como javascript:."""
-    texto_seguro = (texto or "").replace("<", "&lt;")
+    # Sem travessões no texto exibido (regra editorial): "a — b" vira "a, b"
+    texto_seguro = re.sub(r"\s*[—–]\s*", ", ", texto or "").replace("<", "&lt;")
     html_bruto = md.markdown(texto_seguro, extensions=["extra", "sane_lists"])
     try:
         soup = BeautifulSoup(html_bruto, "html.parser")
@@ -411,6 +415,15 @@ async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
         },
         status_code=429,
     )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    if exc.status_code != 404:
+        return await http_exception_handler_padrao(request, exc)
+    with SessionLocal() as db:
+        usuario = auth.obter_usuario_atual(request, db)
+    return templates.TemplateResponse(request=request, name="404.html", context={"usuario": usuario}, status_code=404)
 
 
 # ---------------------------------------------------------------------------
