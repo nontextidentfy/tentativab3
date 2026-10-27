@@ -74,6 +74,7 @@ async def adicionar_cabecalhos_seguranca(request: Request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     if auth.EM_PRODUCAO:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response

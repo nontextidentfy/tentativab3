@@ -321,4 +321,64 @@ def test_producao_sem_smtp_registra_log_error(monkeypatch, caplog):
         auth.log.removeHandler(caplog.handler)
 
 
+# ==============================================================================
+# PASSO 5: Preparação para o Render (render.yaml e Permissions-Policy)
+# ==============================================================================
+
+def test_cabecalho_permissions_policy(client):
+    """Garante que o cabeçalho Permissions-Policy é adicionado às respostas pelo middleware."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert resp.headers.get("Permissions-Policy") == "camera=(), microphone=(), geolocation=()"
+
+
+def test_render_yaml_configuracao_e_variaveis():
+    """Garante que render.yaml existe, está no plano gratuito, com 2 workers e lista as 13 envVars sem valores."""
+    import os
+    import yaml
+
+    caminho_yaml = os.path.join(auth.PASTA_PROJETO, "render.yaml")
+    assert os.path.exists(caminho_yaml), "render.yaml deve existir na raiz do projeto"
+
+    with open(caminho_yaml, "r", encoding="utf-8") as f:
+        config = yaml.safe_load(f)
+
+    servicos = config.get("services", [])
+    assert len(servicos) == 1
+    web = servicos[0]
+
+    assert web.get("plan") == "free"
+    assert web.get("buildCommand") == "pip install -r requirements.txt"
+    assert "gunicorn main:app -w 2 -k uvicorn_worker.UvicornWorker --bind 0.0.0.0:$PORT" in web.get("startCommand", "")
+    assert web.get("healthCheckPath") == "/saude"
+
+    vars_esperadas = {
+        "DATABASE_URL",
+        "SECRET_KEY",
+        "APP_BASE_URL",
+        "GEMINI_API_KEY",
+        "GEMINI_MODEL",
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "SMTP_PASS",
+        "SMTP_FROM",
+        "CONFIAR_PROXY",
+        "EMPRESA_RODAPE",
+        "PYTHON_VERSION",
+    }
+
+    env_vars = web.get("envVars", [])
+    vars_presentes = set()
+    for item in env_vars:
+        chave = item.get("key")
+        vars_presentes.add(chave)
+        assert item.get("sync") is False, f"Variável {chave} deve ter sync: false"
+        # Nenhuma variável de ambiente deve ter valor exposto no render.yaml
+        assert not item.get("value"), f"Variável {chave} não deve possuir valor preenchido no render.yaml"
+
+    assert vars_esperadas.issubset(vars_presentes), f"Faltam variáveis no render.yaml: {vars_esperadas - vars_presentes}"
+
+
+
 
