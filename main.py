@@ -47,13 +47,13 @@ PERFIS_PERMITIDOS: set[str] = {valor for valor, _ in PERFIS_OPCOES}
 
 
 def obter_ip_cliente(request: Request) -> str:
-    """Retorna o IP real do cliente. Lê X-Forwarded-For apenas quando CONFIAR_PROXY=1."""
+    """Retorna o IP real do cliente. Lê X-Forwarded-For apenas quando CONFIAR_PROXY=1 (último IP anexado pelo proxy)."""
     if os.getenv("CONFIAR_PROXY", "").strip() == "1":
         xff = request.headers.get("X-Forwarded-For", "")
         if xff:
-            primeiro_ip = xff.split(",")[0].strip()
-            if primeiro_ip:
-                return primeiro_ip
+            ultimo_ip = xff.split(",")[-1].strip()
+            if ultimo_ip:
+                return ultimo_ip
     return get_remote_address(request)
 
 

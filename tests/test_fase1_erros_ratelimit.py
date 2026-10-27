@@ -19,7 +19,7 @@ def test_1_1_key_func_com_e_sem_confiar_proxy(monkeypatch):
     assert main.obter_ip_cliente(req_falsa) == "127.0.0.1"
 
     monkeypatch.setenv("CONFIAR_PROXY", "1")
-    assert main.obter_ip_cliente(req_falsa) == "203.0.113.42"
+    assert main.obter_ip_cliente(req_falsa) == "10.0.0.1"
 
 
 def test_1_1_rate_limit_estourado_devolve_429_e_diferencia_diario(client, monkeypatch):

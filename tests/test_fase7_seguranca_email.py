@@ -122,3 +122,24 @@ def test_cookie_sem_ps_continua_aceito(client, sessao_db):
     resp = client.get("/watchlist", follow_redirects=False)
     assert resp.status_code == 200
 
+
+# ==============================================================================
+# PASSO 3: IP real atrás do proxy (Render usa o último endereço de XFF)
+# ==============================================================================
+
+def test_obter_ip_cliente_usa_ultimo_ip_do_proxy(monkeypatch):
+    from starlette.requests import Request
+    import main
+
+    monkeypatch.setenv("CONFIAR_PROXY", "1")
+    scope = {
+        "type": "http",
+        "headers": [
+            (b"x-forwarded-for", b"spoofed.client.ip, 198.51.100.2, 192.0.2.99"),
+        ],
+        "client": ("127.0.0.1", 54321),
+    }
+    req = Request(scope)
+    assert main.obter_ip_cliente(req) == "192.0.2.99"
+
+

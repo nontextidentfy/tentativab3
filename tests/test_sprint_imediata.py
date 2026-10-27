@@ -50,7 +50,7 @@ def test_t04_obter_ip_cliente_com_e_sem_confiar_proxy(monkeypatch):
     }
     req = Request(scope)
     ip = obter_ip_cliente(req)
-    assert ip == "203.0.113.50"
+    assert ip == "10.0.0.1"
 
     monkeypatch.delenv("CONFIAR_PROXY", raising=False)
     assert obter_ip_cliente(req) == "127.0.0.1"
