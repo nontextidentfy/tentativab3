@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}{{ titulo or "Não foi possível concluir o pedido" }} | Investidor IA{% endblock %}
+
+{% block content %}
+<div class="painel" style="text-align:center; padding:2.5rem 1.5rem;">
+  <span class="badge badge-neg">Erro {{ codigo }}</span>
+  <h1 style="margin:12px 0 8px; font-size:1.5rem; color:var(--texto);">{{ mensagem }}</h1>
+  <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:1.25rem;">
+    <a href="/" class="btn btn-destaque">Voltar ao painel</a>
+  </div>
+</div>
+{% endblock %}

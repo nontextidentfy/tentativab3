@@ -5,6 +5,7 @@ import os
 import re
 import threading
 from typing import Optional
+from urllib.parse import urlsplit
 from bs4 import BeautifulSoup
 import markdown as md
 from fastapi import FastAPI, Depends, Form, Query, Request
@@ -79,6 +80,37 @@ async def adicionar_cabecalhos_seguranca(request: Request, call_next):
 
 
 templates = Jinja2Templates(directory=os.path.join(PASTA_PROJETO, "templates"))
+
+MSG_CSRF = "Pedido bloqueado por segurança. Abra o site de novo e tente outra vez."
+
+
+def _origem_permitida(request: Request) -> bool:
+    """Verificação de origem (CSRF) para POST: Sec-Fetch-Site primeiro, depois Origin. Sem cabeçalhos, deixa passar."""
+    sec_fetch_site = request.headers.get("sec-fetch-site")
+    if sec_fetch_site is not None:
+        return sec_fetch_site.strip().lower() in ("same-origin", "none")
+    origin = request.headers.get("origin")
+    if origin is None:
+        return True
+    host_origin = urlsplit(origin).hostname
+    hosts_validos = {request.url.hostname}
+    if auth.EM_PRODUCAO:
+        hosts_validos.add(urlsplit(auth.APP_BASE_URL).hostname)
+    return host_origin is not None and host_origin in hosts_validos
+
+
+@app.middleware("http")
+async def bloquear_post_de_outra_origem(request: Request, call_next):
+    if request.method == "POST" and not _origem_permitida(request):
+        return templates.TemplateResponse(
+            request=request,
+            name="erro.html",
+            context={"usuario": None, "codigo": 403, "mensagem": MSG_CSRF, "titulo": "Pedido bloqueado"},
+            status_code=403,
+        )
+    return await call_next(request)
+
+
 templates.env.globals["PERFIS_OPCOES"] = PERFIS_OPCOES
 templates.env.globals["DESCRICAO_TIPO"] = svc.DESCRICAO_TIPO
 log = logging.getLogger("investidor_ia")
