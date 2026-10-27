@@ -7,7 +7,7 @@ import logging
 import os
 import smtplib
 from email.message import EmailMessage
-from typing import Optional
+from typing import Any, Optional, Union
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
 from dotenv import load_dotenv
@@ -94,8 +94,16 @@ def ler_token(token: str, salt: str, max_age_segundos: int) -> Optional[dict]:
         return None
 
 
-def definir_cookie_sessao(response: Response, usuario_id: int):
-    token = criar_token({"uid": usuario_id}, salt="sessao-usuario")
+def definir_cookie_sessao(response: Response, usuario: Any, senha_hash: Optional[str] = None):
+    """Grava o cookie de sessão com o carimbo da senha ("ps"): trocar a senha derruba as sessões antigas."""
+    if hasattr(usuario, "id"):
+        uid = usuario.id
+        sh = getattr(usuario, "senha_hash", None)
+    else:
+        uid = int(usuario)
+        sh = senha_hash
+    dados = {"uid": uid, "ps": obter_carimbo_senha(sh)}
+    token = criar_token(dados, salt="sessao-usuario")
     response.set_cookie(
         key=COOKIE_SESSAO,
         value=token,
@@ -121,7 +129,11 @@ def obter_usuario_atual(
     dados = ler_token(token, salt="sessao-usuario", max_age_segundos=TEMPO_SESSAO_SEGUNDOS)
     if not dados or "uid" not in dados:
         return None
-    return db.query(Usuario).filter(Usuario.id == dados["uid"]).first()
+    usuario = db.query(Usuario).filter(Usuario.id == dados["uid"]).first()
+    # Cookies antigos sem "ps" continuam válidos até expirar; com "ps", precisa bater com a senha atual
+    if usuario and "ps" in dados and dados["ps"] != obter_carimbo_senha(usuario.senha_hash):
+        return None
+    return usuario
 
 
 def verificar_usuario_pro(usuario: Optional[Usuario] = Depends(obter_usuario_atual)) -> bool:

@@ -837,33 +837,16 @@ def processar_cadastro(
     usuario_existente = db.query(Usuario).filter(Usuario.email == email_limpo).first()
 
     if usuario_existente:
-        # Se era um registro antigo da Fase 1 sem senha definida, atualiza com a nova senha Argon2
         if not usuario_existente.senha_hash:
-            try:
-                usuario_existente.nome = nome_limpo
-                usuario_existente.senha_hash = auth.gerar_hash_senha(senha)
-                usuario_existente.perfil_investidor = perfil
-                usuario_existente.aceitou_termos_em = agora_utc()
-                db.commit()
-                db.refresh(usuario_existente)
-            except IntegrityError:
-                db.rollback()
-                return templates.TemplateResponse(
-                    request=request,
-                    name="auth.html",
-                    context={"modo": "cadastro", "error_msg": "Este e-mail já está cadastrado. Faça login ou recupere sua senha."},
-                )
-            auth.disparar_confirmacao_email(usuario_existente)
-            msg_atualizado = _msg_email(
-                "Cadastro atualizado com sucesso! Enviamos um link para o seu e-mail.",
-                "Cadastro atualizado com sucesso! Confira o terminal para confirmar o e-mail.",
+            auth.disparar_recuperacao_senha(usuario_existente)
+            return templates.TemplateResponse(
+                request=request,
+                name="auth.html",
+                context={
+                    "modo": "login",
+                    "success_msg": "Esta conta já existe. Enviamos ao e-mail cadastrado um link para definir a senha.",
+                },
             )
-            resp = RedirectResponse(
-                url=_url_aviso("/watchlist", msg_atualizado),
-                status_code=303,
-            )
-            auth.definir_cookie_sessao(resp, usuario_existente.id)
-            return resp
 
         return templates.TemplateResponse(
             request=request,
@@ -898,7 +881,7 @@ def processar_cadastro(
         "Conta criada! Verifique seu e-mail (ou confira o terminal de teste) para confirmar o cadastro.",
     )
     resp = RedirectResponse(url=_url_aviso("/watchlist", msg_criada), status_code=303)
-    auth.definir_cookie_sessao(resp, novo_usuario.id)
+    auth.definir_cookie_sessao(resp, novo_usuario)
     return resp
 
 
@@ -951,7 +934,7 @@ def processar_login(
         )
 
     resp = RedirectResponse(url="/watchlist", status_code=303)
-    auth.definir_cookie_sessao(resp, u.id)
+    auth.definir_cookie_sessao(resp, u)
     return resp
 
 
@@ -1035,7 +1018,9 @@ def processar_redefinir_senha(
         )
     u.senha_hash = auth.gerar_hash_senha(nova_senha)
     db.commit()
-    return RedirectResponse(url=_url_aviso("/login", "Senha atualizada com sucesso! Faça login."), status_code=303)
+    resp = RedirectResponse(url=_url_aviso("/login", "Senha atualizada com sucesso! Faça login."), status_code=303)
+    auth.limpar_cookie_sessao(resp)
+    return resp
 
 
 # ---------------------------------------------------------------------------
