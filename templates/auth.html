@@ -1,75 +1,114 @@
 {% extends "base.html" %}
+{% block barra_busca_padrao %}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .auth-caixa {
+    position: relative; max-width: 460px; margin: 2.5rem auto 1rem; padding: 2rem 1.75rem;
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 30px 80px -30px rgba(37, 99, 235, 0.55);
+    animation: surge 0.4s ease-out;
+  }
+  .auth-caixa::before {
+    content: ""; position: absolute; left: 24px; right: 24px; top: -1px; height: 2px;
+    background: var(--gradiente); border-radius: 2px;
+  }
+  .auth-caixa h1 { font-size: 1.5rem; justify-content: center; margin-bottom: 1.25rem; }
+  .auth-caixa button[type="submit"] { background: var(--gradiente-botao); padding: 12px 18px; font-size: 0.95rem; margin-top: 4px; }
+  .auth-selo {
+    display: grid; place-items: center; width: 54px; height: 54px; margin: 0 auto 1rem; border-radius: 16px;
+    background: radial-gradient(circle at 30% 20%, #1a2a48, #0b1220);
+    border: 1px solid rgba(59, 130, 246, 0.4); box-shadow: 0 0 30px -6px rgba(37, 99, 235, 0.7);
+  }
+  .rotulo { display: block; font-size: .84rem; color: var(--suave); margin-bottom: 6px; font-weight: 500; }
+  .auth-intro { text-align: center; color: var(--suave); font-size: 0.9rem; margin: -0.75rem 0 1.25rem; }
+  .auth-form { display: flex; flex-direction: column; gap: 12px; }
+  .auth-aceite { font-size: .84rem; color: var(--suave); display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+  .auth-aceite input { margin-top: 4px; accent-color: var(--destaque); }
+  .auth-link { color: var(--destaque); font-weight: 600; text-decoration: none; }
+  .auth-link:hover { text-decoration: underline; }
+  .auth-link-suave { color: var(--suave); text-decoration: none; }
+  .auth-link-suave:hover { color: var(--texto); }
+  .auth-rodape { display: flex; justify-content: space-between; font-size: .85rem; margin-top: 1.1rem; }
+  .auth-rodape-centro { text-align: center; font-size: .85rem; color: var(--suave); margin: 1.1rem 0 0; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="painel" style="max-width:480px; margin:2rem auto;">
+<div class="painel auth-caixa">
+  <div class="auth-selo" aria-hidden="true">
+    <svg width="30" height="30" viewBox="0 0 36 36" fill="none"><g transform="rotate(-18 18 18)"><path d="M18 18 C13 11, 5 11, 5 18 C5 25, 13 25, 18 18 C23 11, 31 11, 31 18" stroke="#3b82f6" stroke-width="3.2" stroke-linecap="round"/><path class="logo-traco" d="M31 18 C31 25, 23 25, 18 18 C13 11, 5 11, 5 18" stroke="#10b981" stroke-width="3.2" stroke-linecap="round"/></g></svg>
+  </div>
   {% if modo == "cadastro" %}
     <h1>Criar Conta Segura</h1>
-    <form method="post" action="/cadastro" style="display:flex; flex-direction:column; gap:12px;">
+    <p class="auth-intro">Grátis. Leva menos de um minuto.</p>
+    <form method="post" action="/cadastro" class="auth-form">
       <div>
-        <label style="font-size:.82rem; color:var(--suave);" for="campo-nome">Nome Completo</label>
+        <label class="rotulo" for="campo-nome">Nome completo</label>
         <input id="campo-nome" class="input-padrao" type="text" name="nome" required minlength="2" maxlength="120" placeholder="Seu nome">
       </div>
       <div>
-        <label style="font-size:.82rem; color:var(--suave);" for="campo-email">E-mail</label>
+        <label class="rotulo" for="campo-email">E-mail</label>
         <input id="campo-email" class="input-padrao" type="email" name="email" required minlength="5" maxlength="150" placeholder="seu@email.com">
       </div>
       <div>
-        <label style="font-size:.82rem; color:var(--suave);" for="campo-senha">Senha (mínimo 8 caracteres, protegida com Argon2)</label>
+        <label class="rotulo" for="campo-senha">Senha (mínimo de 8 caracteres)</label>
         <input id="campo-senha" class="input-padrao" type="password" name="senha" required minlength="8" maxlength="100" placeholder="••••••••">
       </div>
       <div>
-        <label style="font-size:.82rem; color:var(--suave);" for="campo-perfil">Foco de Análise</label>
+        <label class="rotulo" for="campo-perfil">O que você quer analisar</label>
         <select id="campo-perfil" class="input-padrao" name="perfil">
           {% for valor_perfil, rotulo_perfil in PERFIS_OPCOES %}
             <option value="{{ valor_perfil }}">{{ rotulo_perfil }}</option>
           {% endfor %}
         </select>
       </div>
-      <label style="font-size:.82rem; color:var(--suave); display:flex; gap:8px; align-items:flex-start; cursor:pointer;">
-        <input type="checkbox" name="aceite_termos" value="sim" required style="margin-top:4px;">
-        <span>Li e concordo com os <a href="/termos" target="_blank" style="color:var(--destaque);">Termos de Uso e Política de Privacidade (LGPD)</a>.</span>
+      <label class="auth-aceite">
+        <input type="checkbox" name="aceite_termos" value="sim" required>
+        <span>Li e concordo com os <a href="/termos" target="_blank" class="auth-link">Termos de Uso e Política de Privacidade (LGPD)</a>.</span>
       </label>
-      <button type="submit">Criar Minha Conta</button>
+      <button type="submit">Criar minha conta</button>
     </form>
-    <p style="text-align:center; font-size:.85rem; color:var(--suave); margin-top:1rem;">
-      Já possui conta? <a href="/login" style="color:var(--destaque);">Fazer Login</a>
+    <p class="auth-rodape-centro">
+      Já tem conta? <a href="/login" class="auth-link">Entrar</a>
     </p>
 
   {% elif modo == "esqueci" %}
     <h1>Recuperar Senha</h1>
-    <p style="font-size:.88rem; color:var(--suave);">Informe seu e-mail para receber um link seguro de redefinição (válido por 1 hora).</p>
-    <form method="post" action="/esqueci-senha" style="display:flex; flex-direction:column; gap:12px;">
+    <p class="auth-intro">Informe seu e-mail para receber um link seguro de redefinição (válido por 1 hora).</p>
+    <form method="post" action="/esqueci-senha" class="auth-form">
       <input class="input-padrao" type="email" name="email" aria-label="E-mail" required minlength="5" maxlength="150" placeholder="seu@email.com">
-      <button type="submit">Enviar Link de Recuperação</button>
+      <button type="submit">Enviar link de recuperação</button>
     </form>
-    <p style="text-align:center; font-size:.85rem; margin-top:1rem;">
-      <a href="/login" style="color:var(--destaque);">Voltar para o Login</a>
+    <p class="auth-rodape-centro">
+      <a href="/login" class="auth-link">Voltar para o login</a>
     </p>
 
   {% elif modo == "redefinir" %}
     <h1>Definir Nova Senha</h1>
-    <form method="post" action="/redefinir-senha/{{ token }}" style="display:flex; flex-direction:column; gap:12px;">
-      <label style="font-size:.82rem; color:var(--suave);" for="campo-nova_senha">Nova Senha (mínimo 8 caracteres)</label>
+    <form method="post" action="/redefinir-senha/{{ token }}" class="auth-form">
+      <label class="rotulo" for="campo-nova_senha">Nova senha (mínimo de 8 caracteres)</label>
       <input id="campo-nova_senha" class="input-padrao" type="password" name="nova_senha" required minlength="8" maxlength="100" placeholder="••••••••">
-      <button type="submit">Salvar Nova Senha</button>
+      <button type="submit">Salvar nova senha</button>
     </form>
 
   {% else %}
     <h1>Entrar na Plataforma</h1>
-    <form method="post" action="/login" style="display:flex; flex-direction:column; gap:12px;">
+    <p class="auth-intro">Acesse sua lista de ativos e seus alertas de preço.</p>
+    <form method="post" action="/login" class="auth-form">
       <div>
-        <label style="font-size:.82rem; color:var(--suave);" for="campo-email-2">E-mail</label>
+        <label class="rotulo" for="campo-email-2">E-mail</label>
         <input id="campo-email-2" class="input-padrao" type="email" name="email" required minlength="5" maxlength="150" placeholder="seu@email.com">
       </div>
       <div>
-        <label style="font-size:.82rem; color:var(--suave);" for="campo-senha-2">Senha</label>
+        <label class="rotulo" for="campo-senha-2">Senha</label>
         <input id="campo-senha-2" class="input-padrao" type="password" name="senha" required maxlength="100" placeholder="••••••••">
       </div>
       <button type="submit">Entrar</button>
     </form>
-    <div style="display:flex; justify-content:space-between; font-size:.84rem; margin-top:1rem;">
-      <a href="/esqueci-senha" style="color:var(--suave);">Esqueci minha senha</a>
-      <a href="/cadastro" style="color:var(--destaque); font-weight:600;">Criar conta gratuita</a>
+    <div class="auth-rodape">
+      <a href="/esqueci-senha" class="auth-link-suave">Esqueci minha senha</a>
+      <a href="/cadastro" class="auth-link">Criar conta grátis</a>
     </div>
   {% endif %}
 </div>

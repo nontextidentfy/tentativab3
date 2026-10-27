@@ -71,7 +71,7 @@ def test_1_2_nome_so_com_espacos_e_usuario_nome_vazio_na_home(client, sessao_db)
     client.cookies.set(auth.COOKIE_SESSAO, token)
     resp_home = client.get("/")
     assert resp_home.status_code == 200
-    assert "Minha Watchlist (Investidor)" in resp_home.text
+    assert "Meus ativos" in resp_home.text
 
 
 def test_1_3_erro_validacao_volta_para_formulario_certo(client):
@@ -214,4 +214,6 @@ def test_1_6_variacao_nula_na_home(client, sessao_db, monkeypatch):
     resp2 = client.get("/")
     assert resp2.status_code == 200
     assert "VALE3" in resp2.text
-    assert "+0,00%" in resp2.text
+    # Sem dado de variação: mostra N/D, nunca uma alta falsa de +0,00%
+    assert "+0,00%" not in resp2.text
+    assert "Sem dado de variação" in resp2.text

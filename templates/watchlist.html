@@ -1,82 +1,126 @@
 {% extends "base.html" %}
 
-{% block title %}Minha Watchlist & Alertas | Investidor IA{% endblock %}
+{% block title %}Meus ativos e alertas | Stox{% endblock %}
+
+{% block extra_css %}
+<style>
+  .conta-cabeca {
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;
+  }
+  .conta-perfil { display: flex; align-items: center; gap: 14px; min-width: 0; overflow-wrap: anywhere; }
+  .conta-avatar {
+    width: 48px; height: 48px; border-radius: 14px; flex: none; display: grid; place-items: center;
+    font-family: var(--font-titulo); font-weight: 800; font-size: 1.1rem; color: #fff;
+    background: var(--gradiente-botao); box-shadow: 0 8px 20px -10px rgba(37, 99, 235, 0.9);
+  }
+  .conta-perfil h1 { margin: 0 0 4px; font-size: 1.4rem; }
+  .conta-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; color: var(--suave); font-size: 0.85rem; }
+  .form-watchlist { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; align-items: end; }
+  .form-watchlist .campo { display: flex; flex-direction: column; gap: 6px; }
+  .form-watchlist .input-padrao { flex: none; }
+  .form-watchlist label { font-size: 0.8rem; color: var(--suave); font-weight: 500; }
+  .form-watchlist button { min-height: 44px; }
+  .wl-cotacao-hora { display: block; font-size: 0.76rem; color: var(--apagado); font-family: var(--font-mono); }
+  .wl-notas { max-width: 28ch; white-space: normal; color: var(--suave); }
+  .wl-vazio { text-align: center; padding: 2.25rem 1rem; color: var(--apagado); }
+  .wl-vazio strong { display: block; color: var(--texto); margin-bottom: 4px; font-family: var(--font-titulo); }
+  .painel-perigo { border-color: rgba(239, 68, 68, 0.4); }
+  .painel-perigo h2 { color: #f87171; }
+  .form-excluir { display: flex; gap: 10px; flex-wrap: wrap; max-width: 520px; }
+  .form-excluir .input-padrao { flex: 1 1 220px; }
+  .pendente { color: #fbbf24; font-weight: 600; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="painel" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-  <div style="min-width:0; overflow-wrap:anywhere;">
-    <h1 style="margin:0; font-size:1.35rem;">Olá, {{ usuario.nome }}</h1>
-    <div style="color:var(--suave); font-size:.85rem; margin-top:3px;">
-      E-mail: {{ usuario.email }} • Perfil: <span class="badge">{{ usuario.perfil_investidor }}</span>
-      {% if usuario.email_confirmado %}
-        • <span class="pos" style="font-weight:600;">✓ E-mail Verificado</span>
-      {% else %}
-        • <span style="color:#fbbf24; font-weight:600;">E-mail pendente de confirmação</span>
-      {% endif %}
+<div class="painel conta-cabeca">
+  <div class="conta-perfil">
+    <span class="conta-avatar" aria-hidden="true">{{ ((usuario.nome or 'C').strip() or 'C')[0] | upper }}</span>
+    <div>
+      <h1>Olá, {{ usuario.nome }}</h1>
+      <div class="conta-meta">
+        <span>{{ usuario.email }}</span>
+        <span class="tag">{{ usuario.perfil_investidor }}</span>
+        {% if usuario.email_confirmado %}
+          <span class="tag tag-verde">E-mail verificado</span>
+        {% else %}
+          <span class="pendente">E-mail pendente de confirmação</span>
+        {% endif %}
+      </div>
     </div>
   </div>
   {% if not usuario.email_confirmado %}
-  <form method="post" action="/conta/reenviar-confirmacao">
-    <button type="submit" class="btn btn-sec">Reenviar Link de Confirmação</button>
+  <form method="post" action="/conta/reenviar-confirmacao" class="form-inline">
+    <button type="submit" class="btn btn-sec">Reenviar link de confirmação</button>
   </form>
   {% endif %}
 </div>
 
 <div class="painel">
-  <h2>Adicionar Ativo e Alerta de Preço Privado</h2>
-  <form method="post" action="/watchlist/adicionar" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:10px;">
-    <input class="input-padrao" type="text" name="ticker" aria-label="Empresa ou ticker" placeholder="Empresa ou ticker (ex: Sanepar, WEGE3, HGLG11)" required minlength="2" maxlength="60">
-    <input class="input-padrao" type="number" step="0.01" name="preco_alvo" aria-label="Preço alvo de alerta em reais (opcional)" placeholder="Preço Alvo de Alerta R$ (opcional)">
-    <input class="input-padrao" type="text" name="notas" maxlength="500" aria-label="Anotações privadas" placeholder="Suas anotações privadas sobre o balanço/ativo...">
-    <button type="submit">Salvar na Watchlist</button>
+  <h2>Adicionar ativo e alerta de preço</h2>
+  <form method="post" action="/watchlist/adicionar" class="form-watchlist">
+    <div class="campo">
+      <label for="wl-ticker">Empresa ou código</label>
+      <input id="wl-ticker" class="input-padrao" type="text" name="ticker" placeholder="Ex.: Sanepar, WEGE3, HGLG11" required minlength="2" maxlength="60">
+    </div>
+    <div class="campo">
+      <label for="wl-alvo">Preço de alerta em R$ (opcional)</label>
+      <input id="wl-alvo" class="input-padrao" type="number" step="0.01" name="preco_alvo" placeholder="Ex.: 35,00">
+    </div>
+    <div class="campo">
+      <label for="wl-notas">Anotações privadas (opcional)</label>
+      <input id="wl-notas" class="input-padrao" type="text" name="notas" maxlength="500" placeholder="Por que esse ativo te interessa?">
+    </div>
+    <button type="submit" class="btn-destaque">Salvar na Watchlist</button>
   </form>
 </div>
 
 <div class="painel">
-  <h2>Meus Ativos Monitorados (Visível somente para você)</h2>
-  <div style="overflow-x:auto;" tabindex="0">
+  <h2>Minha Watchlist <span class="texto-apoio">(visível só para você)</span></h2>
+  <div class="tabela-rolavel" tabindex="0">
     <table class="tabela">
       <thead>
         <tr>
-          <th>Ativo</th><th>Última Cotação</th><th>Seu Alerta (Alvo)</th>
-          <th>Status do Alerta</th><th>Suas Notas</th><th>Ação</th>
+          <th scope="col">Ativo</th><th scope="col">Última cotação</th><th scope="col">Seu alerta</th>
+          <th scope="col">Situação</th><th scope="col">Suas notas</th><th scope="col"><span class="visualmente-oculto">Ações</span></th>
         </tr>
       </thead>
       <tbody>
         {% for item in itens %}
         <tr>
           <td><a data-carrega href="/analisar?ticker={{ item.ticker }}" class="destaque">{{ item.ticker }}</a></td>
-          <td>
+          <td class="num">
             {% if item.preco_atual is not none %}
               <strong>{{ item.preco_atual | moeda_br }}</strong>
               {% if item.coletado_em %}
-                <span style="display:block; font-size:.76rem; color:var(--suave);">{{ item.coletado_em | horario_br }}</span>
+                <span class="wl-cotacao-hora">{{ item.coletado_em | horario_br }}</span>
               {% endif %}
             {% else %}
-              Consulte o ativo
+              <span class="texto-apoio">Consulte o ativo</span>
             {% endif %}
           </td>
-          <td>{{ (item.preco_alvo | moeda_br) if item.preco_alvo is not none else 'Sem alerta' }}</td>
+          <td class="num">{{ (item.preco_alvo | moeda_br) if item.preco_alvo is not none else 'Sem alerta' }}</td>
           <td>
             {% if item.alerta_atingido %}
-              <span class="badge badge-pos" style="font-weight:700;">Abaixo/Igual ao Alvo!</span>
+              <span class="badge badge-pos">Atingiu o alvo</span>
             {% elif item.preco_alvo %}
-              <span style="color:var(--suave);">Aguardando alvo</span>
+              <span class="tag">Aguardando alvo</span>
             {% else %}
-              <span style="color:var(--apagado);">Sem alerta</span>
+              <span class="texto-apoio">Sem alerta</span>
             {% endif %}
           </td>
-          <td>{{ item.notas or 'Sem notas' }}</td>
+          <td class="wl-notas">{{ item.notas or 'Sem notas' }}</td>
           <td>
-            <form method="post" action="/watchlist/remover/{{ item.id }}" style="margin:0;">
-              <button type="submit" class="btn btn-sec" style="padding:4px 10px; font-size:.78rem;">Remover</button>
+            <form method="post" action="/watchlist/remover/{{ item.id }}" class="form-inline">
+              <button type="submit" class="btn btn-sec btn-sm">Remover</button>
             </form>
           </td>
         </tr>
         {% else %}
         <tr>
-          <td colspan="6" style="text-align:center; padding:2rem; color:var(--apagado);">
-            Sua Watchlist está vazia. Adicione um ativo acima para acompanhar seus alertas!
+          <td colspan="6" class="wl-vazio">
+            <strong>Sua Watchlist está vazia</strong>
+            Adicione um ativo acima para acompanhar o preço e receber o alerta.
           </td>
         </tr>
         {% endfor %}
@@ -85,14 +129,12 @@
   </div>
 </div>
 
-<div class="painel" style="border-color:#7f1d1d;">
-  <h2 style="color:var(--neg);">Privacidade e Exclusão de Conta (LGPD)</h2>
-  <p style="font-size:.85rem; color:var(--suave); margin-top:0;">
-    Você pode excluir sua conta e apagar todos os seus dados e monitoramentos do nosso banco de dados a qualquer momento.
-  </p>
-  <form method="post" action="/conta/excluir" onsubmit="return confirm('Tem certeza que deseja excluir permanentemente sua conta e todos os seus dados?');" style="display:flex; gap:10px; flex-wrap:wrap; max-width:460px;">
+<div class="painel painel-perigo">
+  <h2>Privacidade e exclusão de conta (LGPD)</h2>
+  <p class="texto-apoio">Você pode excluir sua conta e apagar todos os seus dados e monitoramentos a qualquer momento. Essa ação não pode ser desfeita.</p>
+  <form method="post" action="/conta/excluir" onsubmit="return confirm('Tem certeza que deseja excluir permanentemente sua conta e todos os seus dados?');" class="form-excluir">
     <input class="input-padrao" type="password" name="senha_confirmacao" aria-label="Confirme sua senha atual" placeholder="Confirme sua senha atual" required>
-    <button type="submit" class="btn btn-perigo">Excluir Minha Conta Permanentemente</button>
+    <button type="submit" class="btn btn-perigo">Excluir minha conta</button>
   </form>
 </div>
 {% endblock %}

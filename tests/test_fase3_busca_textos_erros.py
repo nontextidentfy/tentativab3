@@ -153,9 +153,9 @@ def test_3_5_3_6_3_7_textos_regulatorios_fluxo_e_lgpd(client, monkeypatch):
     assert "auditoria" not in html_home.lower()
     assert "clique para auditar" not in html_home.lower()
     assert "pressão institucional" not in html_home.lower()
-    assert "Leitura Automática de Balanços" in html_home
-    assert "Clique para analisar" in html_home
-    assert "faixa de 52 semanas e beta" in html_home
+    assert "Pesquise uma ação ou fundo imobiliário" in html_home
+    assert "Clique no código para ver a análise completa" in html_home
+    assert "não são recomendação de investimento" in html_home
 
     # 3.6 Rótulos de fluxo em extrair_fluxo_pregoes
     class _AtivoHist:

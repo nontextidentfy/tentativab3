@@ -5,7 +5,6 @@ import os
 import re
 import threading
 from typing import Optional
-from urllib.parse import quote_plus
 from bs4 import BeautifulSoup
 import markdown as md
 from fastapi import FastAPI, Depends, Form, Query, Request
@@ -376,7 +375,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
         if caminho.startswith("/watchlist"):
             msg = _mensagem_validacao(exc, "Verifique os dados informados para a Watchlist.")
-            return RedirectResponse(url=f"/watchlist?erro={quote_plus(msg)}", status_code=303)
+            return RedirectResponse(url=_url_aviso("/watchlist", msg, "erro"), status_code=303)
 
         painel_ativos = obter_recentes_seguro(db)
 
@@ -432,6 +431,25 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     return templates.TemplateResponse(request=request, name="404.html", context={"usuario": usuario}, status_code=404)
 
 
+def _url_aviso(caminho: str, texto: str, tipo: str = "msg") -> str:
+    """Monta a URL de redirecionamento com um aviso assinado pelo servidor (texto livre na URL é ignorado)."""
+    token = auth.criar_token({"t": texto}, salt="aviso-url")
+    return f"{caminho}?{tipo}={token}"
+
+
+def _ler_aviso(valor: Optional[str]) -> Optional[str]:
+    """Devolve o texto do aviso só se ele foi assinado por este servidor nos últimos 10 minutos."""
+    if not valor:
+        return None
+    dados = auth.ler_token(valor, salt="aviso-url", max_age_segundos=600)
+    if isinstance(dados, dict) and isinstance(dados.get("t"), str):
+        return dados["t"]
+    return None
+
+
+templates.env.globals["url_aviso"] = _url_aviso
+
+
 def _msg_email(enviado: str, local: str) -> str:
     """Mensagem honesta sobre o e-mail: enviado, impresso no terminal (local) ou indisponível (produção sem SMTP)."""
     if auth.email_configurado():
@@ -455,7 +473,7 @@ def pagina_inicial(
     return templates.TemplateResponse(
         request=request,
         name="home.html",
-        context={"painel_ativos": painel_ativos, "usuario": usuario, "success_msg": msg},
+        context={"painel_ativos": painel_ativos, "usuario": usuario, "success_msg": _ler_aviso(msg)},
     )
 
 
@@ -809,7 +827,7 @@ def processar_cadastro(
                 "Cadastro atualizado com sucesso! Confira o terminal para confirmar o e-mail.",
             )
             resp = RedirectResponse(
-                url=f"/watchlist?msg={quote_plus(msg_atualizado)}",
+                url=_url_aviso("/watchlist", msg_atualizado),
                 status_code=303,
             )
             auth.definir_cookie_sessao(resp, usuario_existente.id)
@@ -847,7 +865,7 @@ def processar_cadastro(
         "Conta criada! Enviamos um link para o seu e-mail para confirmar o cadastro.",
         "Conta criada! Verifique seu e-mail (ou confira o terminal de teste) para confirmar o cadastro.",
     )
-    resp = RedirectResponse(url=f"/watchlist?msg={quote_plus(msg_criada)}", status_code=303)
+    resp = RedirectResponse(url=_url_aviso("/watchlist", msg_criada), status_code=303)
     auth.definir_cookie_sessao(resp, novo_usuario.id)
     return resp
 
@@ -871,7 +889,7 @@ def confirmar_email(
     if u:
         u.email_confirmado = True
         db.commit()
-    return RedirectResponse(url="/watchlist?msg=E-mail+confirmado+com+sucesso!", status_code=303)
+    return RedirectResponse(url=_url_aviso("/watchlist", "E-mail confirmado com sucesso!"), status_code=303)
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -879,7 +897,7 @@ def tela_login(request: Request, msg: Optional[str] = None, usuario: Optional[Us
     if usuario:
         return RedirectResponse(url="/watchlist", status_code=303)
     return templates.TemplateResponse(
-        request=request, name="auth.html", context={"modo": "login", "usuario": None, "success_msg": msg}
+        request=request, name="auth.html", context={"modo": "login", "usuario": None, "success_msg": _ler_aviso(msg)}
     )
 
 
@@ -905,9 +923,9 @@ def processar_login(
     return resp
 
 
-@app.get("/logout")
+@app.post("/logout")
 def fazer_logout():
-    resp = RedirectResponse(url="/?msg=Sessao+encerrada+com+seguranca.", status_code=303)
+    resp = RedirectResponse(url=_url_aviso("/", "Sessão encerrada com segurança."), status_code=303)
     auth.limpar_cookie_sessao(resp)
     return resp
 
@@ -985,7 +1003,7 @@ def processar_redefinir_senha(
         )
     u.senha_hash = auth.gerar_hash_senha(nova_senha)
     db.commit()
-    return RedirectResponse(url="/login?msg=Senha+atualizada+com+sucesso!+Faca+login.", status_code=303)
+    return RedirectResponse(url=_url_aviso("/login", "Senha atualizada com sucesso! Faça login."), status_code=303)
 
 
 # ---------------------------------------------------------------------------
@@ -1000,7 +1018,7 @@ def painel_watchlist(
     usuario: Optional[Usuario] = Depends(auth.obter_usuario_atual),
 ):
     if not usuario:
-        return RedirectResponse(url="/login?msg=Faca+login+para+acessar+sua+Watchlist+privada.", status_code=303)
+        return RedirectResponse(url=_url_aviso("/login", "Faça login para acessar sua Watchlist privada."), status_code=303)
 
     # Consulta única com OUTER JOIN para trazer a última cotação de todos os itens (sem N+1)
     linhas = (
@@ -1045,8 +1063,8 @@ def painel_watchlist(
         context={
             "usuario": usuario,
             "itens": lista_enriquecida,
-            "success_msg": msg,
-            "error_msg": erro,
+            "success_msg": _ler_aviso(msg),
+            "error_msg": _ler_aviso(erro),
         },
     )
 
@@ -1068,12 +1086,12 @@ def adicionar_watchlist(
             "Confirme seu endereço de e-mail para adicionar ativos à Watchlist. "
             "Use o botão 'Reenviar Link de Confirmação' no topo da página."
         )
-        return RedirectResponse(url=f"/watchlist?erro={quote_plus(msg_confirm)}", status_code=303)
+        return RedirectResponse(url=_url_aviso("/watchlist", msg_confirm, "erro"), status_code=303)
 
     try:
         ticker_ok = svc.resolver_ticker(ticker)
     except svc.ErroAtivo as e:
-        return RedirectResponse(url=f"/watchlist?erro={quote_plus(str(e))}", status_code=303)
+        return RedirectResponse(url=_url_aviso("/watchlist", str(e), "erro"), status_code=303)
 
     alvo_val = svc.numero(preco_alvo.replace(",", ".")) if preco_alvo.strip() else None
     if alvo_val is not None and alvo_val <= 0:
@@ -1092,9 +1110,9 @@ def adicionar_watchlist(
     except IntegrityError:
         db.rollback()
         msg_dup = f"O ativo {ticker_ok} já está cadastrado na sua Watchlist."
-        return RedirectResponse(url=f"/watchlist?erro={quote_plus(msg_dup)}", status_code=303)
+        return RedirectResponse(url=_url_aviso("/watchlist", msg_dup, "erro"), status_code=303)
 
-    return RedirectResponse(url=f"/watchlist?msg=Ativo+{ticker_ok}+adicionado+a+sua+Watchlist!", status_code=303)
+    return RedirectResponse(url=_url_aviso("/watchlist", f"Ativo {ticker_ok} adicionado à sua Watchlist!"), status_code=303)
 
 
 @app.post("/watchlist/remover/{item_id}")
@@ -1116,7 +1134,7 @@ def remover_watchlist(
     if item:
         db.delete(item)
         db.commit()
-    return RedirectResponse(url="/watchlist?msg=Ativo+removido.", status_code=303)
+    return RedirectResponse(url=_url_aviso("/watchlist", "Ativo removido."), status_code=303)
 
 
 @app.post("/conta/reenviar-confirmacao")
@@ -1132,7 +1150,7 @@ def reenviar_confirmacao(
         "Enviamos um link para o seu e-mail.",
         "Link de confirmação reenviado! Confira o terminal ou seu e-mail.",
     )
-    return RedirectResponse(url=f"/watchlist?msg={quote_plus(msg_reenvio)}", status_code=303)
+    return RedirectResponse(url=_url_aviso("/watchlist", msg_reenvio), status_code=303)
 
 
 @app.post("/conta/excluir")
@@ -1146,11 +1164,11 @@ def excluir_minha_conta(
     if not usuario:
         return RedirectResponse(url="/login", status_code=303)
     if not auth.verificar_senha(usuario.senha_hash, senha_confirmacao):
-        return RedirectResponse(url="/watchlist?erro=Senha+incorreta.+A+conta+nao+foi+excluida.", status_code=303)
+        return RedirectResponse(url=_url_aviso("/watchlist", "Senha incorreta. A conta não foi excluída.", "erro"), status_code=303)
 
     db.delete(usuario)
     db.commit()
-    resp = RedirectResponse(url="/?msg=Sua+conta+e+todos+os+seus+dados+foram+excluidos+permanentemente+(LGPD).", status_code=303)
+    resp = RedirectResponse(url=_url_aviso("/", "Sua conta e todos os seus dados foram excluídos permanentemente (LGPD)."), status_code=303)
     auth.limpar_cookie_sessao(resp)
     return resp
 

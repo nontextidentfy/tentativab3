@@ -1,16 +1,24 @@
 {% extends "base.html" %}
 
-{% block title %}Página não encontrada | Investidor IA{% endblock %}
-{% block descricao %}A página que você procurou não existe. Volte ao painel e pesquise uma empresa ou ticker da B3.{% endblock %}
+{% block title %}Página não encontrada | Stox{% endblock %}
+{% block descricao %}A página que você procurou não existe. Volte ao início e pesquise uma empresa ou ticker da B3.{% endblock %}
+
+{% block extra_css %}
+<style>
+  .pagina-erro { text-align: center; padding: 3.5rem 1.5rem; margin-top: 1.5rem; }
+  .pagina-erro h1 { justify-content: center; margin: 14px 0 8px; font-size: 1.8rem; }
+  .pagina-erro p { color: var(--suave); max-width: 52ch; margin: 0 auto 1.4rem; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="painel" style="text-align:center; padding:2.5rem 1.5rem;">
+<div class="painel pagina-erro">
   <span class="badge badge-neg">Erro 404</span>
-  <h1 style="margin:12px 0 8px; font-size:1.5rem; color:var(--texto);">Essa página não existe ou foi movida</h1>
-  <p style="color:var(--suave); font-size:.95rem; max-width:520px; margin:0 auto 1.25rem; line-height:1.55;">
-    Confira o endereço digitado ou use a busca acima para encontrar uma empresa ou fundo da B3 pelo nome ou pelo ticker.
+  <h1>Essa página não existe ou foi movida</h1>
+  <p>
+    Confira o endereço digitado ou use a busca acima para encontrar uma empresa ou fundo da B3 pelo nome ou pelo código.
   </p>
-  <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+  <div class="acoes acoes-centro">
     <a href="/" class="btn btn-destaque">Voltar ao painel</a>
     <a href="/analisar?ticker=PETR4" class="btn btn-sec">Ver um exemplo: PETR4</a>
   </div>
