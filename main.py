@@ -8,7 +8,7 @@ from typing import Optional
 from urllib.parse import urlsplit
 from bs4 import BeautifulSoup
 import markdown as md
-from fastapi import FastAPI, Depends, Form, Query, Request
+from fastapi import FastAPI, BackgroundTasks, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.exceptions import RequestValidationError
@@ -509,10 +509,16 @@ def pagina_inicial(
     )
 
 
+@app.on_event("startup")
+def verificar_configuracoes_iniciais():
+    """Valida configurações essenciais na inicialização da aplicação."""
+    auth.validar_configuracao_smtp(auth.EM_PRODUCAO)
+
+
 @app.get("/saude")
 def verificar_saude():
     """Endpoint simples para monitoramento (usado por plataformas de hospedagem)."""
-    return {"status": "ok"}
+    return {"status": "ok", "email_configurado": auth.email_configurado()}
 
 
 @app.get("/api/buscar-ativos")
@@ -791,6 +797,14 @@ def analisar_ativo(
 # ---------------------------------------------------------------------------
 # Fase 2: Cadastro, Login (Argon2), Confirmação de E-mail e Recuperação
 # ---------------------------------------------------------------------------
+def _agendar_email(funcao, usuario, background_tasks: Optional[BackgroundTasks] = None):
+    """Encaminha o envio para BackgroundTasks preservando compatibilidade com mocks de teste."""
+    try:
+        return funcao(usuario, background_tasks=background_tasks)
+    except TypeError:
+        return funcao(usuario)
+
+
 @app.get("/cadastro", response_class=HTMLResponse)
 def tela_cadastro(request: Request, usuario: Optional[Usuario] = Depends(auth.obter_usuario_atual)):
     if usuario:
@@ -802,6 +816,7 @@ def tela_cadastro(request: Request, usuario: Optional[Usuario] = Depends(auth.ob
 @limiter.limit("5/minute")
 def processar_cadastro(
     request: Request,
+    background_tasks: BackgroundTasks,
     nome: str = Form(..., min_length=2, max_length=120),
     email: str = Form(..., min_length=5, max_length=150),
     senha: str = Form(..., min_length=8, max_length=100),
@@ -838,7 +853,7 @@ def processar_cadastro(
 
     if usuario_existente:
         if not usuario_existente.senha_hash:
-            auth.disparar_recuperacao_senha(usuario_existente)
+            _agendar_email(auth.disparar_recuperacao_senha, usuario_existente, background_tasks)
             return templates.TemplateResponse(
                 request=request,
                 name="auth.html",
@@ -874,7 +889,7 @@ def processar_cadastro(
             context={"modo": "cadastro", "error_msg": "Este e-mail já está cadastrado. Faça login ou recupere sua senha."},
         )
 
-    auth.disparar_confirmacao_email(novo_usuario)
+    _agendar_email(auth.disparar_confirmacao_email, novo_usuario, background_tasks)
 
     msg_criada = _msg_email(
         "Conta criada! Enviamos um link para o seu e-mail para confirmar o cadastro.",
@@ -954,12 +969,13 @@ def tela_esqueci_senha(request: Request, usuario: Optional[Usuario] = Depends(au
 @limiter.limit("3/minute")
 def processar_esqueci_senha(
     request: Request,
+    background_tasks: BackgroundTasks,
     email: str = Form(..., min_length=5, max_length=150),
     db: Session = Depends(obter_sessao_banco),
 ):
     u = db.query(Usuario).filter(Usuario.email == email.strip().lower()).first()
     if u:
-        auth.disparar_recuperacao_senha(u)
+        _agendar_email(auth.disparar_recuperacao_senha, u, background_tasks)
     msg_esqueci = _msg_email(
         "Se o e-mail estiver cadastrado, enviamos um link para o seu e-mail.",
         "Se o e-mail estiver cadastrado, enviamos o link de recuperação (confira o terminal em modo local).",
@@ -1158,11 +1174,12 @@ def remover_watchlist(
 @limiter.limit("2/minute")
 def reenviar_confirmacao(
     request: Request,
+    background_tasks: BackgroundTasks,
     usuario: Optional[Usuario] = Depends(auth.obter_usuario_atual),
 ):
     if not usuario:
         return RedirectResponse(url="/login", status_code=303)
-    auth.disparar_confirmacao_email(usuario)
+    _agendar_email(auth.disparar_confirmacao_email, usuario, background_tasks)
     msg_reenvio = _msg_email(
         "Enviamos um link para o seu e-mail.",
         "Link de confirmação reenviado! Confira o terminal ou seu e-mail.",

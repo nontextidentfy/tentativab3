@@ -21,7 +21,7 @@ if not url_config or url_config.startswith("driver://"):
     config.set_main_option("sqlalchemy.url", url_efetiva.replace("%", "%%"))
 
 if config.config_file_name is not None and os.path.exists(config.config_file_name):
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = Base.metadata
 

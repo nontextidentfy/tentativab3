@@ -11,7 +11,7 @@ from typing import Any, Optional, Union
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHashError
 from dotenv import load_dotenv
-from fastapi import Depends, Request, Response
+from fastapi import BackgroundTasks, Depends, Request, Response
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from sqlalchemy.orm import Session
 
@@ -55,13 +55,30 @@ def obter_carimbo_senha(senha_hash: Optional[str]) -> str:
     return hashlib.sha256(senha_hash.encode("utf-8")).hexdigest()[:16]
 
 
+VARIAVEIS_SMTP_OBRIGATORIAS = ("SMTP_HOST", "SMTP_USER", "SMTP_PASS")
+
+
+def obter_variaveis_smtp_faltantes() -> list[str]:
+    """Retorna a lista de nomes das variáveis SMTP obrigatórias que faltam no ambiente."""
+    return [v for v in VARIAVEIS_SMTP_OBRIGATORIAS if not (os.getenv(v) or "").strip()]
+
+
 def email_configurado() -> bool:
     """Retorna True somente quando SMTP_HOST, SMTP_USER e SMTP_PASS estão preenchidos no ambiente."""
-    return bool(
-        (os.getenv("SMTP_HOST") or "").strip()
-        and (os.getenv("SMTP_USER") or "").strip()
-        and (os.getenv("SMTP_PASS") or "").strip()
-    )
+    return len(obter_variaveis_smtp_faltantes()) == 0
+
+
+def validar_configuracao_smtp(em_producao: bool) -> None:
+    """Em produção sem SMTP configurado, registra log.error com a lista de variáveis que faltam (nomes, nunca valores)."""
+    if em_producao and not email_configurado():
+        faltantes = obter_variaveis_smtp_faltantes()
+        log.error(
+            "SMTP não configurado em produção. Variáveis faltantes: %s",
+            ", ".join(faltantes),
+        )
+
+
+validar_configuracao_smtp(EM_PRODUCAO)
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +181,7 @@ def enviar_email_transacional(destinatario: str, assunto: str, corpo_texto: str)
     smtp_port = int(os.getenv("SMTP_PORT") or "587")
     smtp_user = os.getenv("SMTP_USER")
     smtp_pass = os.getenv("SMTP_PASS")
-    remetente = os.getenv("SMTP_FROM") or smtp_user or "nao-responda@investidoria.com.br"
+    remetente = (os.getenv("SMTP_FROM") or "").strip() or smtp_user or "nao-responda@investidoria.com.br"
 
     if not email_configurado():
         if EM_PRODUCAO:
@@ -185,39 +202,56 @@ def enviar_email_transacional(destinatario: str, assunto: str, corpo_texto: str)
         msg["To"] = destinatario
         msg.set_content(corpo_texto)
 
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-            server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.send_message(msg)
+        if smtp_port == 465:
+            with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=10) as server:
+                if smtp_user and smtp_pass:
+                    server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
+                server.starttls()
+                if smtp_user and smtp_pass:
+                    server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
     except Exception:
         log.exception("Falha ao enviar e-mail via SMTP para %s", _mascarar_email(destinatario))
 
 
-def disparar_confirmacao_email(usuario: Usuario) -> str:
+def disparar_confirmacao_email(usuario: Usuario, background_tasks: Optional[BackgroundTasks] = None) -> str:
     token = criar_token({"uid": usuario.id, "email": usuario.email}, salt="confirmar-email")
     link = f"{APP_BASE_URL}/confirmar-email/{token}"
+    destinatario = str(usuario.email)
+    assunto = "Confirme seu cadastro - Investidor IA"
     corpo = (
         f"Olá, {usuario.nome}!\n\n"
         f"Bem-vindo ao Investidor IA. Para confirmar seu e-mail e ativar todos os recursos da sua conta, "
         f"acesse o link abaixo (válido por 24 horas):\n\n{link}\n\n"
         f"Se você não criou esta conta, ignore este e-mail."
     )
-    enviar_email_transacional(usuario.email, "Confirme seu cadastro - Investidor IA", corpo)
+    if background_tasks is not None:
+        background_tasks.add_task(enviar_email_transacional, destinatario, assunto, corpo)
+    else:
+        enviar_email_transacional(destinatario, assunto, corpo)
     return link
 
 
-def disparar_recuperacao_senha(usuario: Usuario) -> str:
+def disparar_recuperacao_senha(usuario: Usuario, background_tasks: Optional[BackgroundTasks] = None) -> str:
     pwd_stamp = obter_carimbo_senha(usuario.senha_hash)
     token = criar_token(
         {"uid": usuario.id, "email": usuario.email, "pwd_stamp": pwd_stamp},
         salt="recuperar-senha",
     )
     link = f"{APP_BASE_URL}/redefinir-senha/{token}"
+    destinatario = str(usuario.email)
+    assunto = "Recuperação de Senha - Investidor IA"
     corpo = (
         f"Olá, {usuario.nome}!\n\n"
         f"Recebemos uma solicitação para redefinir sua senha no Investidor IA.\n"
         f"Acesse o link seguro abaixo (válido por 1 hora) para criar uma nova senha:\n\n{link}\n\n"
         f"Se não foi você, nenhuma alteração será feita."
     )
-    enviar_email_transacional(usuario.email, "Recuperação de Senha - Investidor IA", corpo)
+    if background_tasks is not None:
+        background_tasks.add_task(enviar_email_transacional, destinatario, assunto, corpo)
+    else:
+        enviar_email_transacional(destinatario, assunto, corpo)
     return link
