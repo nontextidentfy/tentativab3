@@ -905,6 +905,7 @@ def processar_cadastro(
 def confirmar_email(
     request: Request,
     token: str,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(obter_sessao_banco),
     usuario: Optional[Usuario] = Depends(auth.obter_usuario_atual),
 ):
@@ -918,8 +919,11 @@ def confirmar_email(
 
     u = db.query(Usuario).filter(Usuario.id == dados["uid"]).first()
     if u:
+        primeira_confirmacao = not u.email_confirmado
         u.email_confirmado = True
         db.commit()
+        if primeira_confirmacao:
+            _agendar_email(auth.disparar_boas_vindas, u, background_tasks)
     return RedirectResponse(url=_url_aviso("/watchlist", "E-mail confirmado com sucesso!"), status_code=303)
 
 

@@ -255,3 +255,30 @@ def disparar_recuperacao_senha(usuario: Usuario, background_tasks: Optional[Back
     else:
         enviar_email_transacional(destinatario, assunto, corpo)
     return link
+
+
+def disparar_boas_vindas(usuario: Usuario, background_tasks: Optional[BackgroundTasks] = None) -> None:
+    """E-mail transacional enviado uma única vez, logo após a primeira confirmação do e-mail."""
+    destinatario = str(usuario.email)
+    assunto = "Bem-vindo ao Investidor IA"
+    corpo = (
+        f"Olá, {usuario.nome}!\n\n"
+        f"Seu e-mail foi confirmado e sua conta no Investidor IA está ativa.\n\n"
+        f"O que é o Investidor IA:\n"
+        f"Um site educativo que traduz os números das empresas da Bolsa (B3) para linguagem simples. "
+        f"Em vez de siglas soltas como P/L ou ROE, você vê o que cada indicador significa no dia a dia, "
+        f"se a empresa está cara ou barata em relação ao próprio histórico e aos concorrentes, "
+        f"e qual o impacto prático no seu bolso.\n\n"
+        f"O que você pode fazer agora:\n"
+        f"- Buscar uma empresa pelo nome que você conhece da rua (ex.: Banco do Brasil, Magalu) ou pelo código na Bolsa.\n"
+        f"- Ler o dossiê: o que a empresa faz, como ganha dinheiro e quem a controla.\n"
+        f"- Confrontar as promessas das redes sociais com a realidade, no simulador com dados históricos.\n"
+        f"- Montar a sua lista de acompanhamento.\n\n"
+        f"Acesse: {APP_BASE_URL}\n\n"
+        f"O conteúdo é educativo e não é recomendação de investimento. "
+        f"Rentabilidade passada não é garantia de resultado futuro."
+    )
+    if background_tasks is not None:
+        background_tasks.add_task(enviar_email_transacional, destinatario, assunto, corpo)
+    else:
+        enviar_email_transacional(destinatario, assunto, corpo)

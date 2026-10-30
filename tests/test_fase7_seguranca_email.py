@@ -382,3 +382,46 @@ def test_render_yaml_configuracao_e_variaveis():
 
 
 
+
+
+# ==============================================================================
+# PÓS-FASE 7: e-mail de boas-vindas após a primeira confirmação
+# ==============================================================================
+
+def _usuario_nao_confirmado(sessao_db, email):
+    u = banco.Usuario(nome="Maria Teste", email=email, senha_hash=auth.gerar_hash_senha("Senha123!"), email_confirmado=False)
+    sessao_db.add(u)
+    sessao_db.commit()
+    sessao_db.refresh(u)
+    return u
+
+
+def test_confirmar_email_envia_boas_vindas_uma_unica_vez(client, sessao_db, monkeypatch):
+    enviados = []
+    monkeypatch.setattr(auth, "enviar_email_transacional", lambda dest, assunto, corpo: enviados.append((dest, assunto, corpo)))
+
+    u = _usuario_nao_confirmado(sessao_db, "boasvindas@exemplo.com")
+    token = auth.criar_token({"uid": u.id, "email": u.email}, salt="confirmar-email")
+
+    r1 = client.get(f"/confirmar-email/{token}", follow_redirects=False)
+    assert r1.status_code == 303
+    assert len(enviados) == 1
+    dest, assunto, corpo = enviados[0]
+    assert dest == "boasvindas@exemplo.com"
+    assert "Bem-vindo" in assunto
+    assert "Maria" in corpo
+    # Texto educativo: sem recomendação de compra/venda nem promessa de retorno
+    for proibida in ("compre", "venda suas", "garantido", "preço-alvo"):
+        assert proibida not in corpo.lower()
+    assert "não é recomendação" in corpo.lower()
+
+    # Clicar de novo no mesmo link não reenvia
+    client.get(f"/confirmar-email/{token}", follow_redirects=False)
+    assert len(enviados) == 1
+
+
+def test_confirmar_email_com_token_invalido_nao_envia_boas_vindas(client, monkeypatch):
+    enviados = []
+    monkeypatch.setattr(auth, "enviar_email_transacional", lambda *a, **k: enviados.append(a))
+    client.get("/confirmar-email/token-invalido", follow_redirects=False)
+    assert enviados == []
