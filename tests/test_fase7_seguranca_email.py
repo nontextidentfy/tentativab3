@@ -425,3 +425,43 @@ def test_confirmar_email_com_token_invalido_nao_envia_boas_vindas(client, monkey
     monkeypatch.setattr(auth, "enviar_email_transacional", lambda *a, **k: enviados.append(a))
     client.get("/confirmar-email/token-invalido", follow_redirects=False)
     assert enviados == []
+
+
+# ==============================================================================
+# AUDITORIA LGPD E ROTAS DE PRIVACIDADE
+# ==============================================================================
+
+def test_rota_privacidade_redireciona_301_para_termos_privacidade(client):
+    """Garante que /privacidade redireciona para /termos#privacidade com status 301."""
+    resp = client.get("/privacidade", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/termos#privacidade"
+
+
+def test_pagina_termos_e_lgpd_sem_placeholders_e_com_contato_dpo(client):
+    """Garante que templates/legal.html renderiza 200 e não contém placeholders não preenchidos."""
+    resp = client.get("/termos")
+    assert resp.status_code == 200
+    assert "pedromoura132123@gmail.com" in resp.text
+    assert "LGPD" in resp.text
+    assert "[E-MAIL DO ENCARREGADO/DPO]" not in resp.text
+    assert "[RAZÃO SOCIAL]" not in resp.text
+    assert "[E-MAIL DE CONTATO]" not in resp.text
+    assert "[DATA]" not in resp.text
+
+
+def test_cadastro_sem_aceite_lgpd_retorna_422_ou_erro(client):
+    """Garante que o cadastro recusa submissão sem aceite dos termos LGPD."""
+    resp = client.post(
+        "/cadastro",
+        data={
+            "nome": "Usuario Teste Sem LGPD",
+            "email": "semlgpd@exemplo.com",
+            "senha": "SenhaForte123!",
+            "perfil": "Fundamentalista",
+            # aceite_termos omitido propositalmente
+        },
+    )
+    assert resp.status_code in (200, 422)
+    assert "Você precisa aceitar os Termos de Uso e Política de Privacidade" in resp.text
+

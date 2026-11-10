@@ -132,7 +132,13 @@ def definir_cookie_sessao(response: Response, usuario: Any, senha_hash: Optional
 
 
 def limpar_cookie_sessao(response: Response):
-    response.delete_cookie(key=COOKIE_SESSAO)
+    response.delete_cookie(
+        key=COOKIE_SESSAO,
+        path="/",
+        httponly=True,
+        samesite="lax",
+        secure=EM_PRODUCAO,
+    )
 
 
 def obter_usuario_atual(

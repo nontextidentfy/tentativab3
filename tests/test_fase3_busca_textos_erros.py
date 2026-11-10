@@ -186,7 +186,7 @@ def test_3_5_3_6_3_7_textos_regulatorios_fluxo_e_lgpd(client, monkeypatch):
     assert "anotações" in html_legal
     assert "endereço IP" in html_legal
     assert "90 dias" in html_legal
-    assert "[E-MAIL DE CONTATO]" in html_legal
+    assert ("[E-MAIL DE CONTATO]" in html_legal or "pedromoura132123@gmail.com" in html_legal)
 
 
 def test_3_8_busca_marcas_cotidiano_e_cooperativas(client):

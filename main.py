@@ -1217,6 +1217,12 @@ def pagina_termos_privacidade(request: Request, usuario: Optional[Usuario] = Dep
     return templates.TemplateResponse(request=request, name="legal.html", context={"usuario": usuario})
 
 
+@app.get("/privacidade")
+def redirecionar_privacidade():
+    """Redireciona atalho de privacidade diretamente para a seção correspondente nos termos legais."""
+    return RedirectResponse(url="/termos#privacidade", status_code=301)
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
