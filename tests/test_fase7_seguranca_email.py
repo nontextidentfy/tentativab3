@@ -465,3 +465,170 @@ def test_cadastro_sem_aceite_lgpd_retorna_422_ou_erro(client):
     assert resp.status_code in (200, 422)
     assert "Você precisa aceitar os Termos de Uso e Política de Privacidade" in resp.text
 
+
+# ==============================================================================
+# AUDITORIA AVANÇADA LGPD, SESSÕES, RECUPERAÇÃO E CONTAS
+# ==============================================================================
+
+def test_cadastro_com_aceite_lgpd_persiste_timestamp_no_banco(client, sessao_db):
+    """Garante que o aceite dos termos LGPD preenche e persiste 'aceitou_termos_em' no banco."""
+    import datetime
+    email_teste = "consentimento_lgpd@exemplo.com"
+    resp = client.post(
+        "/cadastro",
+        data={
+            "nome": "Investidor Consentido",
+            "email": email_teste,
+            "senha": "SenhaForte123!",
+            "perfil": "Fundamentalista",
+            "aceite_termos": "on",
+        },
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    usuario = sessao_db.query(banco.Usuario).filter_by(email=email_teste).first()
+    assert usuario is not None
+    assert usuario.aceitou_termos_em is not None
+    assert isinstance(usuario.aceitou_termos_em, datetime.datetime)
+    delta = (banco.agora_utc() - usuario.aceitou_termos_em).total_seconds()
+    assert delta < 10.0
+
+
+def test_cadastro_recusado_sem_aceite_lgpd_nao_persiste_no_banco(client, sessao_db):
+    """Garante que a recusa do cadastro por falta de aceite não cria nenhum registro no banco."""
+    email_teste = "recusado_lgpd@exemplo.com"
+    resp = client.post(
+        "/cadastro",
+        data={
+            "nome": "Usuario Recusado",
+            "email": email_teste,
+            "senha": "SenhaForte123!",
+            "perfil": "Dividendos",
+        },
+    )
+    assert resp.status_code in (200, 422)
+    assert "Você precisa aceitar os Termos de Uso e Política de Privacidade" in resp.text
+    assert sessao_db.query(banco.Usuario).filter_by(email=email_teste).first() is None
+
+
+def test_confirmar_email_ativa_flag_no_banco_e_persiste(client, sessao_db, monkeypatch):
+    """Garante que o clique no link válido efetivamente comuta 'email_confirmado = True' no banco."""
+    monkeypatch.setattr(auth, "enviar_email_transacional", lambda *args, **kwargs: None)
+    u = _usuario_nao_confirmado(sessao_db, "ativar_flag@exemplo.com")
+    assert u.email_confirmado is False
+
+    token = auth.criar_token({"uid": u.id, "email": u.email}, salt="confirmar-email")
+    resp = client.get(f"/confirmar-email/{token}", follow_redirects=False)
+    assert resp.status_code == 303
+
+    sessao_db.refresh(u)
+    assert u.email_confirmado is True
+
+
+def test_confirmar_email_com_token_invalido_renderiza_erro(client):
+    """Garante que token inválido exibe a mensagem amigável na tela de login."""
+    resp = client.get("/confirmar-email/token-totalmente-invalido")
+    assert resp.status_code == 200
+    assert "Link de confirmação inválido ou expirado." in resp.text
+
+
+def test_esqueci_senha_anti_enumeracao_respostas_identicas(client, sessao_db, monkeypatch):
+    """Garante que a resposta HTTP é IDÊNTICA para e-mail existente e inexistente, impedindo enumeração."""
+    import main
+    _usuario_nao_confirmado(sessao_db, "cadastrado@exemplo.com")
+
+    emails_enviados = []
+    monkeypatch.setattr(auth, "disparar_recuperacao_senha", lambda user, bg=None: emails_enviados.append(user.email))
+
+    r_existe = client.post("/esqueci-senha", data={"email": "cadastrado@exemplo.com"})
+    assert r_existe.status_code == 200
+    assert len(emails_enviados) == 1
+
+    if hasattr(main.limiter, "_storage") and hasattr(main.limiter._storage, "reset"):
+        main.limiter._storage.reset()
+
+    r_nao_existe = client.post("/esqueci-senha", data={"email": "nao_existe_jamais@exemplo.com"})
+    assert r_nao_existe.status_code == 200
+    assert len(emails_enviados) == 1  # Não enviou segundo e-mail
+
+    assert "Se o e-mail estiver cadastrado" in r_existe.text
+    assert "Se o e-mail estiver cadastrado" in r_nao_existe.text
+    assert r_existe.text == r_nao_existe.text
+
+
+def test_redefinir_senha_reuso_rejeitado_em_get_e_post(client, sessao_db):
+    """Garante que link de recuperação usado uma vez não pode ser aberto nem submetido novamente."""
+    u = _logar(client, sessao_db, email="reuso_link@exemplo.com", senha="SenhaAntiga123!")
+    token_link = auth.disparar_recuperacao_senha(u).split("/")[-1]
+
+    r_get1 = client.get(f"/redefinir-senha/{token_link}")
+    assert r_get1.status_code == 200
+    assert "Definir Nova Senha" in r_get1.text
+
+    r_post1 = client.post(
+        f"/redefinir-senha/{token_link}",
+        data={"nova_senha": "NovaSenhaForte456!"},
+        follow_redirects=False,
+    )
+    assert r_post1.status_code == 303
+
+    r_get2 = client.get(f"/redefinir-senha/{token_link}")
+    assert r_get2.status_code == 200
+    assert "Este link de recuperação já foi utilizado" in r_get2.text
+
+    r_post2 = client.post(
+        f"/redefinir-senha/{token_link}",
+        data={"nova_senha": "OutraSenhaTentada789!"},
+        follow_redirects=False,
+    )
+    assert r_post2.status_code == 200
+    assert "Este link de recuperação já foi utilizado" in r_post2.text
+
+
+def test_excluir_conta_senha_incorreta_recusa_e_preserva_dados(client, sessao_db):
+    """Garante que POST /conta/excluir com senha incorreta não apaga o usuário nem seus dados."""
+    u = _logar(client, sessao_db, email="nao_excluir@exemplo.com", senha="SenhaCerta123!")
+    monit = banco.MonitoramentoUsuario(usuario_id=u.id, ticker="PETR4")
+    sessao_db.add(monit)
+    sessao_db.commit()
+
+    resp = client.post("/conta/excluir", data={"senha_confirmacao": "SenhaIncorreta999!"}, follow_redirects=False)
+    assert resp.status_code == 303
+    assert "/watchlist?erro=" in resp.headers["location"]
+
+    assert sessao_db.query(banco.Usuario).filter_by(id=u.id).first() is not None
+    assert sessao_db.query(banco.MonitoramentoUsuario).filter_by(usuario_id=u.id).count() == 1
+
+
+def test_excluir_conta_senha_correta_executa_cascade_lgpd_e_limpa_cookie(client, sessao_db):
+    """Garante exclusão definitiva do usuário, exclusão em cascata dos monitoramentos e expiração do cookie de sessão."""
+    u = _logar(client, sessao_db, email="excluir_definitivo@exemplo.com", senha="SenhaSecreta123!")
+    u_id = u.id
+
+    sessao_db.add_all([
+        banco.MonitoramentoUsuario(usuario_id=u_id, ticker="VALE3"),
+        banco.MonitoramentoUsuario(usuario_id=u_id, ticker="ITUB4"),
+    ])
+    sessao_db.commit()
+    assert sessao_db.query(banco.MonitoramentoUsuario).filter_by(usuario_id=u_id).count() == 2
+
+    resp = client.post("/conta/excluir", data={"senha_confirmacao": "SenhaSecreta123!"}, follow_redirects=False)
+    assert resp.status_code == 303
+    assert "/?msg=" in resp.headers["location"]
+
+    set_cookie = resp.headers.get("set-cookie", "")
+    assert auth.COOKIE_SESSAO in set_cookie
+    assert "max-age=0" in set_cookie.lower() or "expires=" in set_cookie.lower()
+
+    assert sessao_db.query(banco.Usuario).filter_by(id=u_id).first() is None
+    assert sessao_db.query(banco.MonitoramentoUsuario).filter_by(usuario_id=u_id).count() == 0
+
+
+def test_excluir_conta_sem_autenticacao_redireciona_login(client):
+    """Garante que requisição anônima para excluir conta redireciona para /login."""
+    client.cookies.clear()
+    resp = client.post("/conta/excluir", data={"senha_confirmacao": "QualquerCoisa"}, follow_redirects=False)
+    assert resp.status_code == 303
+    assert resp.headers["location"] == "/login"
+
+
