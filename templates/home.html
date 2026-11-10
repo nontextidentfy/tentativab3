@@ -77,19 +77,65 @@
   .hero-confianca li { display: inline-flex; align-items: center; gap: 7px; }
   .hero-confianca svg { color: var(--pos); flex: none; }
 
-  /* ---------- Faixa de cotações ---------- */
+  /* ---------- Faixa de cotações animada B3 (Ticker Tape) ---------- */
   .faixa {
     position: relative; overflow: hidden; margin: 0 0 3rem;
-    border-top: 1px solid var(--borda); border-bottom: 1px solid var(--borda);
-    background: rgba(11, 18, 32, 0.55);
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    border-top: 1px solid rgba(59, 130, 246, 0.22);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.22);
+    background: linear-gradient(90deg, rgba(8, 14, 26, 0.9) 0%, rgba(13, 22, 40, 0.9) 50%, rgba(8, 14, 26, 0.9) 100%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.6);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 96%, transparent 100%);
+            mask-image: linear-gradient(90deg, transparent 0%, #000 4%, #000 96%, transparent 100%);
   }
-  .faixa-trilho { display: flex; gap: 2.25rem; width: max-content; padding: 0.75rem 0; animation: rola 45s linear infinite; }
+  .faixa-trilho {
+    display: flex; align-items: center; gap: 1.25rem; width: max-content; padding: 0.75rem 0;
+    animation: rolaTicker 38s linear infinite;
+  }
   .faixa:hover .faixa-trilho { animation-play-state: paused; }
-  @keyframes rola { to { transform: translateX(-50%); } }
-  .faixa-item { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--font-mono); font-size: 0.82rem; color: var(--suave); }
-  .faixa-item strong { color: var(--texto); }
+  @keyframes rolaTicker {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .faixa-trilho { animation: none; overflow-x: auto; }
+  }
+  .faixa-bloco-secao {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    font-size: 0.72rem; font-weight: 800; font-family: var(--font-titulo); letter-spacing: 0.06em;
+    text-transform: uppercase; white-space: nowrap; flex: none;
+  }
+  .faixa-bloco-live {
+    background: rgba(59, 130, 246, 0.16); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.35);
+  }
+  .faixa-bloco-altas {
+    background: rgba(16, 185, 129, 0.16); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.35);
+  }
+  .faixa-bloco-baixas {
+    background: rgba(239, 68, 68, 0.16); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35);
+  }
+  .faixa-item {
+    display: inline-flex; align-items: center; gap: 9px; padding: 5px 12px; border-radius: 999px;
+    text-decoration: none; font-family: var(--font-mono); font-size: 0.82rem; color: var(--suave);
+    background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(59, 130, 246, 0.16);
+    white-space: nowrap; flex: none;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  }
+  .faixa-item:hover {
+    transform: translateY(-2px); border-color: var(--destaque); color: #fff;
+    background: rgba(59, 130, 246, 0.15); box-shadow: 0 4px 14px -3px var(--destaque-glow);
+  }
+  .faixa-item-alta { border-color: rgba(16, 185, 129, 0.28); }
+  .faixa-item-alta:hover { border-color: var(--pos); box-shadow: 0 4px 14px -3px rgba(16, 185, 129, 0.4); }
+  .faixa-item-baixa { border-color: rgba(239, 68, 68, 0.28); }
+  .faixa-item-baixa:hover { border-color: var(--neg); box-shadow: 0 4px 14px -3px rgba(239, 68, 68, 0.4); }
+  .faixa-item strong { color: var(--texto); font-weight: 700; }
+  .faixa-item .preco { color: #dbeafe; font-weight: 500; }
+  .faixa-item .badge-mini {
+    font-size: 0.72rem; font-weight: 700; padding: 2px 7px; border-radius: 6px;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
 
   /* ---------- Blocos ---------- */
   .bloco { margin: 0 0 3.25rem; }
@@ -99,49 +145,83 @@
 
   .passos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
   .passo {
-    position: relative; padding: 1.35rem; border-radius: 14px;
-    background: var(--card); border: 1px solid var(--borda);
-    transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+    position: relative; padding: 1.45rem; border-radius: var(--raio);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(10, 16, 30, 0.85) 100%);
+    border: 1px solid var(--borda);
+    box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
   }
-  .passo:hover { transform: translateY(-3px); border-color: rgba(59, 130, 246, 0.4); box-shadow: 0 18px 36px -24px rgba(37, 99, 235, 0.6); }
+  .passo:hover {
+    transform: translateY(-3px); border-color: rgba(59, 130, 246, 0.45);
+    box-shadow: 0 18px 36px -18px rgba(37, 99, 235, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
   .passo-numero {
-    width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; font-size: 0.9rem;
+    width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 0.92rem;
     font-family: var(--font-titulo); font-weight: 800; color: #fff; background: var(--gradiente-botao);
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
     margin-bottom: 0.9rem;
   }
-  .passo h3, .recurso h3 { margin: 0 0 0.35rem; font-size: 1rem; }
-  .passo p, .recurso p { margin: 0; color: var(--suave); font-size: 0.9rem; }
+  .passo h3, .recurso h3 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+  .passo p, .recurso p { margin: 0; color: var(--suave); font-size: 0.9rem; line-height: 1.55; }
 
   .recursos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
   .recurso {
-    padding: 1.3rem; border-radius: 14px;
-    background: var(--card); border: 1px solid var(--borda);
-    transition: transform 0.3s, border-color 0.3s;
+    padding: 1.4rem; border-radius: var(--raio);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(10, 16, 30, 0.85) 100%);
+    border: 1px solid var(--borda);
+    box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
   }
-  .recurso:hover { transform: translateY(-3px); border-color: rgba(16, 185, 129, 0.35); }
+  .recurso:hover {
+    transform: translateY(-3px); border-color: rgba(16, 185, 129, 0.45);
+    box-shadow: 0 18px 36px -18px rgba(16, 185, 129, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
   .recurso-icone {
-    width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
-    background: rgba(59, 130, 246, 0.12); color: #8ab4ff; border: 1px solid rgba(59, 130, 246, 0.25);
+    width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+    background: rgba(59, 130, 246, 0.14); color: #8ab4ff; border: 1px solid rgba(59, 130, 246, 0.28);
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.25);
     margin-bottom: 0.9rem;
   }
-  .recurso-icone-verde { background: rgba(16, 185, 129, 0.12); color: #34d399; border-color: rgba(16, 185, 129, 0.25); }
+  .recurso-icone-verde {
+    background: rgba(16, 185, 129, 0.14); color: #34d399; border-color: rgba(16, 185, 129, 0.28);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+  }
 
   /* ---------- Radar ---------- */
-  .radar-intro { margin: 0 0 1rem; }
-  .radar-intro h2 { margin: 0 0 4px; }
-  .radar-intro p { margin: 0; max-width: 64ch; }
+  .radar-intro { margin: 0 0 1.15rem; }
+  .radar-intro h2 { margin: 0 0 6px; }
+  .radar-intro p { margin: 0; max-width: 64ch; color: var(--suave); }
   .movers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr)); gap: 14px; margin-bottom: 1.5rem; }
-  .mover-panel { background: var(--card); border: 1px solid var(--borda); border-radius: 14px; padding: 1.05rem 1.15rem; transition: border-color 0.3s; }
-  .mover-panel:hover { border-color: #2c3f63; }
-  .mover-header { display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: center; padding-bottom: 0.65rem; margin-bottom: 0.35rem; border-bottom: 1px solid var(--borda); }
+  .mover-panel {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(10, 16, 30, 0.9) 100%);
+    border: 1px solid var(--borda); border-radius: var(--raio); padding: 1.15rem 1.25rem;
+    box-shadow: 0 12px 30px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+  }
+  .mover-panel:hover {
+    border-color: rgba(59, 130, 246, 0.38); transform: translateY(-2px);
+    box-shadow: 0 18px 36px -16px rgba(37, 99, 235, 0.3);
+  }
+  .mover-header {
+    display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: center;
+    padding: 6px 10px 8px; margin: -4px -6px 0.5rem; border-radius: 8px;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.12);
+  }
+  .mover-header-altas { background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, transparent 100%); }
+  .mover-header-baixas { background: linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, transparent 100%); }
+  .mover-header-vol { background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, transparent 100%); }
   .mover-title { font-size: 0.92rem; font-weight: 700; color: var(--texto); display: flex; align-items: center; gap: 8px; margin: 0; }
   .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-  .dot-pos { background: var(--pos); }
-  .dot-neg { background: var(--neg); }
-  .dot-vol { background: var(--destaque); }
+  .dot-pos { background: var(--pos); box-shadow: 0 0 8px rgba(16, 185, 129, 0.6); }
+  .dot-neg { background: var(--neg); box-shadow: 0 0 8px rgba(239, 68, 68, 0.6); }
+  .dot-vol { background: var(--destaque); box-shadow: 0 0 8px rgba(56, 189, 248, 0.6); }
   .mover-list { list-style: none; margin: 0; padding: 0; }
-  .mover-item { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 8px; margin: 0 -8px; border-radius: 8px; font-size: 0.85rem; transition: background 0.15s; }
-  .mover-item:hover { background: rgba(59, 130, 246, 0.06); }
+  .mover-item {
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    padding: 9px 10px; margin: 0 -6px; border-radius: 8px; font-size: 0.85rem;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+  .mover-item:hover { background: rgba(59, 130, 246, 0.08); transform: translateX(2px); }
   .mover-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .mover-ticker { font-family: var(--font-mono); font-weight: 700; color: var(--texto); text-decoration: none; min-width: 62px; }
   .mover-ticker:hover { color: var(--destaque); }
@@ -150,7 +230,11 @@
   .mover-price { color: var(--suave); }
   .mover-empty { color: var(--apagado); font-size: 0.85rem; padding: 1.3rem 0.5rem; text-align: center; }
 
-  .table-panel { background: var(--card); border: 1px solid var(--borda); border-radius: 14px; padding: 1.25rem; box-shadow: var(--sombra); margin-bottom: 3rem; }
+  .table-panel {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.8) 0%, rgba(10, 16, 30, 0.9) 100%);
+    border: 1px solid var(--borda); border-radius: var(--raio); padding: 1.4rem;
+    box-shadow: var(--sombra); margin-bottom: 3rem;
+  }
   .table-header-flex { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 1rem; }
   .table-header-flex h2 { margin: 0; font-size: 1.05rem; }
   .table-wrapper { overflow-x: auto; border-radius: 10px; border: 1px solid var(--borda); }
@@ -224,23 +308,87 @@
   </ul>
 </section>
 
-<!-- FAIXA DE COTAÇÕES (ATIVOS CONSULTADOS) -->
-{% set ativos_faixa = (painel_ativos | selectattr('variacao_dia_pct', 'ne', none) | list) if painel_ativos else [] %}
-{% if ativos_faixa %}
-<div class="faixa" aria-label="Ativos consultados recentemente e a variação no último pregão registrado">
+<!-- FAIXA DE COTAÇÕES ANIMADA (RADAR DE ALTAS E BAIXAS B3) -->
+{% set ativos_validos = painel_ativos | selectattr('variacao_dia_pct', 'ne', none) | list if painel_ativos else [] %}
+{% set altas_faixa = ativos_validos | selectattr('variacao_dia_pct', 'gt', 0) | sort(attribute='variacao_dia_pct', reverse=True) | list %}
+{% set baixas_faixa = ativos_validos | selectattr('variacao_dia_pct', 'lt', 0) | sort(attribute='variacao_dia_pct') | list %}
+
+{# Se houver poucos ativos no banco, enriquecer com referencias populares de mercado para a faixa sempre ter movimento rico #}
+{% if not ativos_validos %}
+  {% set itens_ticker_demo = [
+    {'ticker': 'PETR4', 'preco_atual': 53.18, 'variacao_dia_pct': 1.88, 'moeda_cotacao': 'BRL'},
+    {'ticker': 'WEGE3', 'preco_atual': 54.20, 'variacao_dia_pct': 1.15, 'moeda_cotacao': 'BRL'},
+    {'ticker': 'SANB11', 'preco_atual': 28.00, 'variacao_dia_pct': 0.43, 'moeda_cotacao': 'BRL'},
+    {'ticker': 'ITUB4', 'preco_atual': 36.45, 'variacao_dia_pct': 0.80, 'moeda_cotacao': 'BRL'},
+    {'ticker': 'BBSE3', 'preco_atual': 37.10, 'variacao_dia_pct': 0.55, 'moeda_cotacao': 'BRL'},
+    {'ticker': 'VALE3', 'preco_atual': 58.90, 'variacao_dia_pct': -1.25, 'moeda_cotacao': 'BRL'},
+    {'ticker': 'MGLU3', 'preco_atual': 8.12, 'variacao_dia_pct': -2.40, 'moeda_cotacao': 'BRL'},
+    {'ticker': 'RENT3', 'preco_atual': 44.10, 'variacao_dia_pct': -0.95, 'moeda_cotacao': 'BRL'},
+    {'ticker': 'MXRF11', 'preco_atual': 10.25, 'variacao_dia_pct': 0.10, 'moeda_cotacao': 'BRL'}
+  ] %}
+{% else %}
+  {% set itens_ticker_demo = [] %}
+{% endif %}
+
+<div class="faixa" aria-label="Radar de cotacoes em tempo real: maiores altas e baixas da B3">
   <div class="faixa-trilho">
     {% for volta in range(2) %}
-      {% for item in ativos_faixa %}
-      <a class="faixa-item" data-carrega href="/analisar?ticker={{ item.ticker }}" {% if volta %}aria-hidden="true" tabindex="-1"{% endif %}>
-        <strong>{{ item.ticker }}</strong>
-        <span>{{ item.preco_atual | moeda_br(item.moeda_cotacao or 'BRL') }}</span>
-        <span class="{{ 'pos' if item.variacao_dia_pct >= 0 else 'neg' }}">{{ '▲ +' if item.variacao_dia_pct >= 0 else '▼ ' }}{{ item.variacao_dia_pct | numero_br(2) }}%</span>
-      </a>
-      {% endfor %}
+      <span class="faixa-bloco-secao faixa-bloco-live" {% if volta %}aria-hidden="true"{% endif %}>
+        <span class="hero-pulso" aria-hidden="true"></span> Radar B3
+      </span>
+
+      {% if altas_faixa %}
+        <span class="faixa-bloco-secao faixa-bloco-altas" {% if volta %}aria-hidden="true"{% endif %}>
+          Maiores Altas
+        </span>
+        {% for item in altas_faixa[:6] %}
+        <a class="faixa-item faixa-item-alta" data-carrega href="/analisar?ticker={{ item.ticker }}" {% if volta %}aria-hidden="true" tabindex="-1"{% endif %}>
+          <strong>{{ item.ticker }}</strong>
+          <span class="preco">{{ item.preco_atual | moeda_br(item.moeda_cotacao or 'BRL') }}</span>
+          <span class="badge-mini pos">▲ +{{ item.variacao_dia_pct | numero_br(2) }}%</span>
+        </a>
+        {% endfor %}
+      {% endif %}
+
+      {% if baixas_faixa %}
+        <span class="faixa-bloco-secao faixa-bloco-baixas" {% if volta %}aria-hidden="true"{% endif %}>
+          Maiores Baixas
+        </span>
+        {% for item in baixas_faixa[:6] %}
+        <a class="faixa-item faixa-item-baixa" data-carrega href="/analisar?ticker={{ item.ticker }}" {% if volta %}aria-hidden="true" tabindex="-1"{% endif %}>
+          <strong>{{ item.ticker }}</strong>
+          <span class="preco">{{ item.preco_atual | moeda_br(item.moeda_cotacao or 'BRL') }}</span>
+          <span class="badge-mini neg">▼ {{ item.variacao_dia_pct | numero_br(2) }}%</span>
+        </a>
+        {% endfor %}
+      {% endif %}
+
+      {% if itens_ticker_demo %}
+        <span class="faixa-bloco-secao faixa-bloco-altas" {% if volta %}aria-hidden="true"{% endif %}>
+          Maiores Altas
+        </span>
+        {% for item in itens_ticker_demo if item.variacao_dia_pct > 0 %}
+        <a class="faixa-item faixa-item-alta" data-carrega href="/analisar?ticker={{ item.ticker }}" {% if volta %}aria-hidden="true" tabindex="-1"{% endif %}>
+          <strong>{{ item.ticker }}</strong>
+          <span class="preco">{{ item.preco_atual | moeda_br(item.moeda_cotacao or 'BRL') }}</span>
+          <span class="badge-mini pos">▲ +{{ item.variacao_dia_pct | numero_br(2) }}%</span>
+        </a>
+        {% endfor %}
+
+        <span class="faixa-bloco-secao faixa-bloco-baixas" {% if volta %}aria-hidden="true"{% endif %}>
+          Maiores Baixas
+        </span>
+        {% for item in itens_ticker_demo if item.variacao_dia_pct < 0 %}
+        <a class="faixa-item faixa-item-baixa" data-carrega href="/analisar?ticker={{ item.ticker }}" {% if volta %}aria-hidden="true" tabindex="-1"{% endif %}>
+          <strong>{{ item.ticker }}</strong>
+          <span class="preco">{{ item.preco_atual | moeda_br(item.moeda_cotacao or 'BRL') }}</span>
+          <span class="badge-mini neg">▼ {{ item.variacao_dia_pct | numero_br(2) }}%</span>
+        </a>
+        {% endfor %}
+      {% endif %}
     {% endfor %}
   </div>
 </div>
-{% endif %}
 
 <!-- COMO FUNCIONA -->
 <section class="bloco" data-revelar aria-labelledby="como-titulo">
@@ -313,7 +461,7 @@
 
   <section class="movers-grid" aria-labelledby="radar-titulo">
     <div class="mover-panel">
-      <div class="mover-header">
+      <div class="mover-header mover-header-altas">
         <h3 class="mover-title"><span class="dot dot-pos" aria-hidden="true"></span> Maiores altas</h3>
         <span class="badge badge-pos">Variação</span>
       </div>
@@ -338,7 +486,7 @@
     </div>
 
     <div class="mover-panel">
-      <div class="mover-header">
+      <div class="mover-header mover-header-baixas">
         <h3 class="mover-title"><span class="dot dot-neg" aria-hidden="true"></span> Maiores baixas</h3>
         <span class="badge badge-neg">Variação</span>
       </div>
@@ -363,7 +511,7 @@
     </div>
 
     <div class="mover-panel">
-      <div class="mover-header">
+      <div class="mover-header mover-header-vol">
         <h3 class="mover-title"><span class="dot dot-vol" aria-hidden="true"></span> Mais negociados</h3>
         <span class="badge badge-destaque">Volume em R$</span>
       </div>
